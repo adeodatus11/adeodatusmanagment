@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMS – System Zarządzania Działalnością</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">AMS</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-view="areas" onclick="showView('areas')">
+        <span class="nav-icon">🗂</span><span class="nav-label">Obszary</span>
+      </a>
+      <a href="#" class="nav-item" data-view="projects" onclick="showView('projects')">
+        <span class="nav-icon">📁</span><span class="nav-label">Projekty</span>
+      </a>
+      <a href="#" class="nav-item" data-view="tasks" onclick="showView('tasks')">
+        <span class="nav-icon">✅</span><span class="nav-label">Zadania</span>
+      </a>
+      <a href="#" class="nav-item" data-view="log" onclick="showView('log')">
+        <span class="nav-icon">📋</span><span class="nav-label">Log działań</span>
+      </a>
+      <a href="#" class="nav-item" data-view="contacts" onclick="showView('contacts')">
+        <span class="nav-icon">👥</span><span class="nav-label">Osoby</span>
+      </a>
+      <a href="#" class="nav-item" data-view="calendar" onclick="showView('calendar')">
+        <span class="nav-icon">📅</span><span class="nav-label">Terminy</span>
+      </a>
+      <a href="#" class="nav-item" data-view="reports" onclick="showView('reports')">
+        <span class="nav-icon">📊</span><span class="nav-label">Raporty</span>
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn-quick btn-quick-task" onclick="openModal('addTask')">+ Zadanie</button>
+      <button class="btn-quick btn-quick-log" onclick="openModal('addLog')">+ Log</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view active">
+      <header class="view-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="view-subtitle" id="today-date"></p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-primary" onclick="openModal('addTask')">+ Nowe zadanie</button>
+          <button class="btn-secondary" onclick="openModal('addLog')">+ Wpis do logu</button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-overdue" onclick="showView('tasks','overdue')">
+          <div class="kpi-icon">🔴</div>
+          <div class="kpi-info">
+            <div class="kpi-num" id="kpi-overdue">0</div>
+            <div class="kpi-label">Po terminie</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-week" onclick="showView('tasks','week')">
+          <div class="kpi-icon">📅</div>
+          <div class="kpi-info">
+            <div class="kpi-num" id="kpi-week">0</div>
+            <div class="kpi-label">Na 7 dni</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-waiting" onclick="showView('tasks','waiting')">
+          <div class="kpi-icon">⏳</div>
+          <div class="kpi-info">
+            <div class="kpi-num" id="kpi-waiting">0</div>
+            <div class="kpi-label">Czekam na kogoś</div>
+          </div>
+        </div>
+        <div class="kpi-card kpi-active" onclick="showView('projects')">
+          <div class="kpi-icon">🚀</div>
+          <div class="kpi-info">
+            <div class="kpi-num" id="kpi-active">0</div>
+            <div class="kpi-label">Aktywne projekty</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard columns -->
+      <div class="dashboard-cols">
+        <!-- Left -->
+        <div class="dash-col">
+          <div class="dash-widget">
+            <div class="widget-header"><span>🔴 Po terminie</span></div>
+            <div class="widget-body" id="widget-overdue-tasks"></div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-header"><span>📅 Na najbliższe 7 dni</span></div>
+            <div class="widget-body" id="widget-week-tasks"></div>
+          </div>
+        </div>
+        <!-- Center -->
+        <div class="dash-col">
+          <div class="dash-widget">
+            <div class="widget-header"><span>⏳ Czekam na kogoś</span></div>
+            <div class="widget-body" id="widget-waiting-tasks"></div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-header"><span>🚀 Aktywne projekty</span><a href="#" onclick="showView('projects')" class="widget-link">Wszystkie</a></div>
+            <div class="widget-body" id="widget-active-projects"></div>
+          </div>
+        </div>
+        <!-- Right -->
+        <div class="dash-col">
+          <div class="dash-widget">
+            <div class="widget-header"><span>📋 Ostatnie działania</span><a href="#" onclick="showView('log')" class="widget-link">Wszystkie</a></div>
+            <div class="widget-body" id="widget-recent-log"></div>
+          </div>
+          <div class="dash-widget">
+            <div class="widget-header"><span>📅 Najbliższe terminy</span></div>
+            <div class="widget-body" id="widget-events"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AREAS VIEW -->
+    <div id="view-areas" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Obszary Działalności</h1>
+          <p class="view-subtitle">Najwyższy poziom Twojej organizacji</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addArea')">+ Nowy obszar</button>
+      </header>
+      <div class="areas-grid" id="areas-grid"></div>
+    </div>
+
+    <!-- PROJECTS VIEW -->
+    <div id="view-projects" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Projekty i Działania</h1>
+          <p class="view-subtitle">Zarządzaj swoimi projektami</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addProject')">+ Nowy projekt</button>
+      </header>
+      <div class="filter-bar">
+        <select id="filter-area" onchange="renderProjects()" class="filter-select">
+          <option value="">Wszystkie obszary</option>
+        </select>
+        <select id="filter-proj-status" onchange="renderProjects()" class="filter-select">
+          <option value="">Wszystkie statusy</option>
+          <option>Pomysł</option><option>Do decyzji</option><option>Zaplanowane</option>
+          <option>W toku</option><option>Czekam na kogoś</option><option>Zablokowane</option>
+          <option>Do poprawy</option><option>Gotowe</option><option>Archiwum</option>
+        </select>
+      </div>
+      <div id="projects-list" class="card-list"></div>
+    </div>
+
+    <!-- TASKS VIEW -->
+    <div id="view-tasks" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Zadania</h1>
+          <p class="view-subtitle">Wszystkie zadania w systemie</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addTask')">+ Nowe zadanie</button>
+      </header>
+      <div class="filter-bar">
+        <select id="filter-task-area" onchange="renderTasks()" class="filter-select">
+          <option value="">Wszystkie obszary</option>
+        </select>
+        <select id="filter-task-status" onchange="renderTasks()" class="filter-select">
+          <option value="">Wszystkie statusy</option>
+          <option>Pomysł</option><option>Do decyzji</option><option>Zaplanowane</option>
+          <option>W toku</option><option>Czekam na kogoś</option><option>Zablokowane</option>
+          <option>Do poprawy</option><option>Gotowe</option><option>Archiwum</option>
+        </select>
+        <select id="filter-task-priority" onchange="renderTasks()" class="filter-select">
+          <option value="">Wszystkie priorytety</option>
+          <option>Niski</option><option>Normalny</option><option>Wysoki</option><option>Krytyczny</option>
+        </select>
+        <input type="text" id="filter-task-search" placeholder="Szukaj zadań..." class="filter-input" oninput="renderTasks()">
+      </div>
+      <div id="tasks-list" class="card-list"></div>
+    </div>
+
+    <!-- LOG VIEW -->
+    <div id="view-log" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Dziennik Działań</h1>
+          <p class="view-subtitle">Chronologiczny zapis wszystkich aktywności</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addLog')">+ Nowy wpis</button>
+      </header>
+      <div class="filter-bar">
+        <select id="filter-log-area" onchange="renderLog()" class="filter-select">
+          <option value="">Wszystkie obszary</option>
+        </select>
+        <select id="filter-log-type" onchange="renderLog()" class="filter-select">
+          <option value="">Wszystkie typy</option>
+          <option>Mail</option><option>Spotkanie</option><option>Ustalenie</option><option>Decyzja</option>
+          <option>Telefon</option><option>Dokument</option><option>Raport</option><option>Delegacja</option><option>Inne</option>
+        </select>
+      </div>
+      <div id="log-timeline" class="timeline"></div>
+    </div>
+
+    <!-- CONTACTS VIEW -->
+    <div id="view-contacts" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Baza Osób</h1>
+          <p class="view-subtitle">Kontakty, partnerzy, współpracownicy</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addContact')">+ Nowa osoba</button>
+      </header>
+      <input type="text" id="contacts-search" placeholder="Szukaj osoby, organizacji..." class="filter-input full-width" oninput="renderContacts()">
+      <div id="contacts-list" class="contacts-grid"></div>
+    </div>
+
+    <!-- CALENDAR VIEW -->
+    <div id="view-calendar" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Terminy i Wydarzenia</h1>
+          <p class="view-subtitle">Kalendarze, deadline'y, spotkania</p>
+        </div>
+        <button class="btn-primary" onclick="openModal('addEvent')">+ Nowe wydarzenie</button>
+      </header>
+      <div id="events-list" class="card-list"></div>
+    </div>
+
+    <!-- REPORTS VIEW -->
+    <div id="view-reports" class="view">
+      <header class="view-header">
+        <div>
+          <h1>Raporty</h1>
+          <p class="view-subtitle">Analiza aktywności i postępów</p>
+        </div>
+      </header>
+      <div id="reports-content"></div>
+    </div>
+
+  </main>
+
+  <!-- ===== MODALS ===== -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+
+  <!-- Add Area Modal -->
+  <div class="modal" id="modal-addArea">
+    <div class="modal-header"><h2>Nowy Obszar Działalności</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <label>Nazwa obszaru *</label>
+      <input type="text" id="area-name" class="form-input" placeholder="np. WIN4SMEs / COVE Polska">
+      <label>Opis</label>
+      <textarea id="area-desc" class="form-input" rows="3" placeholder="Krótki opis obszaru..."></textarea>
+      <label>Kolor</label>
+      <div class="color-picker" id="area-color-picker"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveArea()">Zapisz obszar</button>
+    </div>
+  </div>
+
+  <!-- Add Project Modal -->
+  <div class="modal" id="modal-addProject">
+    <div class="modal-header"><h2>Nowy Projekt / Działanie</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <label>Obszar *</label>
+      <select id="proj-area" class="form-input"></select>
+      <label>Nazwa projektu *</label>
+      <input type="text" id="proj-name" class="form-input" placeholder="np. WP2 – Content Development">
+      <label>Opis</label>
+      <textarea id="proj-desc" class="form-input" rows="3"></textarea>
+      <div class="form-row">
+        <div>
+          <label>Status</label>
+          <select id="proj-status" class="form-input">
+            <option>Pomysł</option><option>Do decyzji</option><option selected>Zaplanowane</option>
+            <option>W toku</option><option>Czekam na kogoś</option><option>Zablokowane</option>
+            <option>Do poprawy</option><option>Gotowe</option><option>Archiwum</option>
+          </select>
+        </div>
+        <div>
+          <label>Priorytet</label>
+          <select id="proj-priority" class="form-input">
+            <option>Niski</option><option selected>Normalny</option><option>Wysoki</option><option>Krytyczny</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Data rozpoczęcia</label><input type="date" id="proj-start" class="form-input"></div>
+        <div><label>Data zakończenia</label><input type="date" id="proj-end" class="form-input"></div>
+      </div>
+      <label>Budżet (opcjonalnie)</label>
+      <input type="text" id="proj-budget" class="form-input" placeholder="np. 15 000 EUR">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveProject()">Zapisz projekt</button>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div class="modal modal-large" id="modal-addTask">
+    <div class="modal-header"><h2 id="addTask-title">Nowe Zadanie</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <label>Projekt *</label>
+      <select id="task-project" class="form-input"><option value="">-- Wybierz projekt --</option></select>
+      <label>Nazwa zadania *</label>
+      <input type="text" id="task-name" class="form-input" placeholder="np. Przygotować raport WP2">
+      <label>Opis / Notatki</label>
+      <textarea id="task-desc" class="form-input" rows="3"></textarea>
+      <div class="form-row">
+        <div>
+          <label>Status</label>
+          <select id="task-status" class="form-input">
+            <option>Pomysł</option><option>Do decyzji</option><option>Zaplanowane</option>
+            <option selected>W toku</option><option>Czekam na kogoś</option><option>Zablokowane</option>
+            <option>Do poprawy</option><option>Gotowe</option><option>Archiwum</option>
+          </select>
+        </div>
+        <div>
+          <label>Priorytet</label>
+          <select id="task-priority" class="form-input">
+            <option>Niski</option><option selected>Normalny</option><option>Wysoki</option><option>Krytyczny</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div><label>Deadline</label><input type="date" id="task-due" class="form-input"></div>
+        <div><label>Postęp (%)</label><input type="number" id="task-progress" class="form-input" value="0" min="0" max="100"></div>
+      </div>
+      <label>Osoba odpowiedzialna / Czekam na</label>
+      <select id="task-contact" class="form-input"><option value="">-- Wybierz osobę (opcjonalnie) --</option></select>
+      <label>Etapy / Checklista (opcjonalnie)</label>
+      <div id="task-steps-list"></div>
+      <button class="btn-secondary btn-sm" onclick="addTaskStep()" style="margin-top:8px">+ Dodaj etap</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveTask()">Zapisz zadanie</button>
+    </div>
+  </div>
+
+  <!-- Add Log Modal -->
+  <div class="modal" id="modal-addLog">
+    <div class="modal-header"><h2>Nowy Wpis do Dziennika</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div>
+          <label>Typ działania</label>
+          <select id="log-type" class="form-input">
+            <option>Mail</option><option>Spotkanie</option><option>Ustalenie</option><option>Decyzja</option>
+            <option>Telefon</option><option>Dokument</option><option>Raport</option><option>Delegacja</option><option>Inne</option>
+          </select>
+        </div>
+        <div>
+          <label>Data</label>
+          <input type="date" id="log-date" class="form-input">
+        </div>
+      </div>
+      <label>Opis *</label>
+      <textarea id="log-desc" class="form-input" rows="4" placeholder="np. Mail do partnera w sprawie harmonogramu WP2..."></textarea>
+      <label>Powiąż z projektem</label>
+      <select id="log-project" class="form-input"><option value="">-- Opcjonalnie --</option></select>
+      <label>Powiąż z zadaniem</label>
+      <select id="log-task" class="form-input"><option value="">-- Opcjonalnie --</option></select>
+      <label>Powiąż z osobą</label>
+      <select id="log-contact" class="form-input"><option value="">-- Opcjonalnie --</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveLog()">Zapisz wpis</button>
+    </div>
+  </div>
+
+  <!-- Add Contact Modal -->
+  <div class="modal" id="modal-addContact">
+    <div class="modal-header"><h2>Nowa Osoba</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div><label>Imię *</label><input type="text" id="contact-first" class="form-input" placeholder="Jan"></div>
+        <div><label>Nazwisko *</label><input type="text" id="contact-last" class="form-input" placeholder="Kowalski"></div>
+      </div>
+      <label>Organizacja / Firma</label>
+      <input type="text" id="contact-org" class="form-input" placeholder="np. Politechnika Gdańska">
+      <label>Rola / Stanowisko</label>
+      <input type="text" id="contact-role" class="form-input" placeholder="np. Partner projektu">
+      <div class="form-row">
+        <div><label>Email</label><input type="email" id="contact-email" class="form-input"></div>
+        <div><label>Telefon</label><input type="tel" id="contact-phone" class="form-input"></div>
+      </div>
+      <label>Notatki</label>
+      <textarea id="contact-notes" class="form-input" rows="3"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveContact()">Zapisz osobę</button>
+    </div>
+  </div>
+
+  <!-- Add Event Modal -->
+  <div class="modal" id="modal-addEvent">
+    <div class="modal-header"><h2>Nowe Wydarzenie / Termin</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <label>Tytuł *</label>
+      <input type="text" id="event-title" class="form-input" placeholder="np. Spotkanie partnerów Hamburg">
+      <div class="form-row">
+        <div><label>Data *</label><input type="date" id="event-date" class="form-input"></div>
+        <div><label>Godzina</label><input type="time" id="event-time" class="form-input"></div>
+      </div>
+      <label>Powiąż z projektem</label>
+      <select id="event-project" class="form-input"><option value="">-- Opcjonalnie --</option></select>
+      <label>Notatki</label>
+      <textarea id="event-notes" class="form-input" rows="3"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveEvent()">Zapisz wydarzenie</button>
+    </div>
+  </div>
+
+  <!-- Detail Panel (right slide-in) -->
+  <div class="detail-panel" id="detail-panel">
+    <div class="detail-panel-inner" id="detail-panel-inner"></div>
+  </div>
+  <div class="detail-overlay" id="detail-overlay" onclick="closeDetailPanel()"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
