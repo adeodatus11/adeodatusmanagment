@@ -1,0 +1,122 @@
+// Prisma schema for AMS – Activity Management System
+// Prisma 7: datasource url must be in prisma.config.ts, not here
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Area {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#6366f1")
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  projects    Project[]
+}
+
+model Project {
+  id          String     @id @default(cuid())
+  areaId      String
+  name        String
+  description String?
+  status      String     @default("Zaplanowane")
+  priority    String     @default("Normalny")
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  area        Area       @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  logs        ActionLog[]
+  events      Event[]
+  documents   Document[]
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  status      String      @default("W toku")
+  priority    String      @default("Normalny")
+  dueDate     DateTime?
+  progress    Int         @default(0)
+  contactId   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contact     Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  steps       TaskStep[]
+  logs        ActionLog[]
+  documents   Document[]
+}
+
+model TaskStep {
+  id          String   @id @default(cuid())
+  taskId      String
+  title       String
+  completed   Boolean  @default(false)
+  order       Int      @default(0)
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id           String    @id @default(cuid())
+  firstName    String
+  lastName     String
+  organization String?
+  role         String?
+  email        String?
+  phone        String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  tasks        Task[]
+  logs         ActionLog[]
+}
+
+model ActionLog {
+  id          String    @id @default(cuid())
+  actionType  String    @default("Inne")
+  description String
+  date        DateTime  @default(now())
+  projectId   String?
+  taskId      String?
+  contactId   String?
+  createdAt   DateTime  @default(now())
+
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  contact     Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  date        DateTime
+  time        String?
+  notes       String?
+  projectId   String?
+  createdAt   DateTime  @default(now())
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+}
+
+model Document {
+  id          String    @id @default(cuid())
+  title       String
+  urlOrPath   String?
+  type        String    @default("Link")
+  projectId   String?
+  taskId      String?
+  createdAt   DateTime  @default(now())
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
