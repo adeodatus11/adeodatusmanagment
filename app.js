@@ -27,10 +27,29 @@ function saveToStorage() {
   updateUI();
 }
 
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.innerText = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function clearInputs(parent) {
+    parent.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.type === 'checkbox') el.checked = false;
+        else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+    });
+}
+
 function seedInitialData() {
   storage.areas = [
     { id: 'a1', name: 'WIN4SMEs', color: '#6366f1', desc: 'Projekt WIN4SMEs' },
     { id: 'a2', name: 'COVE Polska', color: '#10b981', desc: 'Centra Doskonałości Zawodowej' }
+  ];
+  storage.projects = [
+    { id: 'p1', areaId: 'a1', name: 'Zarządzanie WP1', status: 'W toku', priority: 'Wysoki' }
   ];
   saveToStorage();
 }
@@ -269,6 +288,7 @@ function renderEvents() {
 
 // --- SAVE ACTIONS ---
 function saveArea() {
+  const modal = document.getElementById('modal-addArea');
   const name = document.getElementById('area-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
@@ -276,14 +296,17 @@ function saveArea() {
     id: generateId(),
     name,
     desc: document.getElementById('area-desc').value,
-    color: '#6366f1' // Default color for simplicity
+    color: '#6366f1'
   });
   
   saveToStorage();
+  clearInputs(modal);
   closeAllModals();
+  showToast('Obszar został zapisany! ✅');
 }
 
 function saveProject() {
+  const modal = document.getElementById('modal-addProject');
   const name = document.getElementById('proj-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
@@ -299,10 +322,13 @@ function saveProject() {
   });
   
   saveToStorage();
+  clearInputs(modal);
   closeAllModals();
+  showToast('Projekt został zapisany! 📁');
 }
 
 function saveTask() {
+  const modal = document.getElementById('modal-addTask');
   const name = document.getElementById('task-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
@@ -317,10 +343,13 @@ function saveTask() {
   });
   
   saveToStorage();
+  clearInputs(modal);
   closeAllModals();
+  showToast('Zadanie zostało zapisane! ✅');
 }
 
 function saveLog() {
+    const modal = document.getElementById('modal-addLog');
     const desc = document.getElementById('log-desc').value;
     if (!desc) return alert('Opis jest wymagany');
     
@@ -332,10 +361,13 @@ function saveLog() {
     });
     
     saveToStorage();
+    clearInputs(modal);
     closeAllModals();
+    showToast('Wpis do dziennika zapisany! 📋');
 }
 
 function saveContact() {
+    const modal = document.getElementById('modal-addContact');
     const first = document.getElementById('contact-first').value;
     const last = document.getElementById('contact-last').value;
     if (!first || !last) return alert('Imię i nazwisko są wymagane');
@@ -348,10 +380,13 @@ function saveContact() {
     });
     
     saveToStorage();
+    clearInputs(modal);
     closeAllModals();
+    showToast('Osoba zapisana do bazy! 👥');
 }
 
 function saveEvent() {
+    const modal = document.getElementById('modal-addEvent');
     const title = document.getElementById('event-title').value;
     if (!title) return alert('Tytuł jest wymagany');
     
@@ -363,7 +398,9 @@ function saveEvent() {
     });
     
     saveToStorage();
+    clearInputs(modal);
     closeAllModals();
+    showToast('Wydarzenie zapisane! 📅');
 }
 
 // --- SELECT BOX HELPERS ---
