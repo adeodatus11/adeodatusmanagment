@@ -1,0 +1,8 @@
+exclude:
+  - ams/node_modules
+  - node_modules
+  - vendor
+  - .bundle
+  - .sass-cache
+  - Gemfile
+  - Gemfile.lock
