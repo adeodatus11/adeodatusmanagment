@@ -275,6 +275,10 @@ h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; }
 .modal-overlay.open { display: flex; }
 
 .modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -284,8 +288,12 @@ h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; }
   overflow-y: auto;
   display: none;
   flex-direction: column;
+  z-index: 1010;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
 }
 .modal.open { display: flex; }
+
+.modal-large { max-width: 800px; }
 
 .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
 .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
