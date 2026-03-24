@@ -511,7 +511,7 @@ select.form-input { appearance: none; background-image: url("data:image/svg+xml,
 .detail-panel-inner { padding: 2.5rem 2rem; overflow-y: auto; flex: 1; }
 
 .multi-select-container {
-    max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.5);
+    max-height: 160px; min-height: 80px; flex-shrink: 0; overflow-y: auto; background: rgba(0,0,0,0.5);
     padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); display:flex; flex-direction:column; gap:4px;
     margin-bottom: 2px;
 }
