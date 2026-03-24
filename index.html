@@ -48,8 +48,19 @@
     </div>
   </aside>
 
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
   <!-- MAIN CONTENT -->
   <main class="main-content" id="main-content">
+
+    <!-- MOBILE HEADER -->
+    <div class="mobile-header">
+      <div class="mobile-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">AMS</span>
+      </div>
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    </div>
 
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="view active">

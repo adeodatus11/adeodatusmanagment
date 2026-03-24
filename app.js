@@ -89,6 +89,9 @@ function showView(viewId, filter = null) {
   const navItem = document.querySelector(`.nav-item[data-view="${viewId}"]`);
   if (navItem) navItem.classList.add('active');
 
+  // Close sidebar on mobile
+  closeSidebar();
+
   if (viewId === 'dashboard') renderDashboard();
   if (viewId === 'areas') renderAreas();
   if (viewId === 'projects') renderProjects();
@@ -96,6 +99,29 @@ function showView(viewId, filter = null) {
   if (viewId === 'log') renderLog();
   if (viewId === 'contacts') renderContacts();
   if (viewId === 'calendar') renderEvents();
+}
+
+// --- SIDEBAR TOGGLE ---
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar.classList.contains('open')) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden'; // prevent scrolling behind
+  }
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar && overlay) {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 }
 
 // --- MODAL MANAGEMENT ---
