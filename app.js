@@ -461,48 +461,80 @@ function renderEvents() {
     const daysOfWeek = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'N'];
     daysOfWeek.forEach(d => html += `<div class="calendar-day-header">${d}</div>`);
     
-    const firstDayIndex = (new Date(year, month, 1).getDay() || 7) - 1; 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const renderItemsHtml = (items) => {
+        return items.map(it => {
+           let assigneesHtml = '';
+           // Make array unique
+           const uniqueIds = [...new Set(it.assignedIds)];
+           uniqueIds.forEach(idStr => {
+               if (idStr.startsWith('contact_')) {
+                   const c = storage.contacts.find(x => x.id === idStr.split('_')[1]);
+                   if (c) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${c.first}]</span>`;
+               } else if (idStr.startsWith('team_')) {
+                   const t = (storage.teams||[]).find(x => x.id === idStr.split('_')[1]);
+                   if (t) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${t.name}]</span>`;
+               }
+           });
+           let clickAction = '';
+           if (it.type === 'task') clickAction = `onclick="openDetail('task', '${it.d.id}')"`;
+           else if (it.type === 'project') clickAction = `onclick="openDetail('project', '${it.d.id}')"`;
+           else if (it.type === 'event') clickAction = `onclick="editItem('event', '${it.d.id}')"`;
+           
+           return `<div class="cal-event-badge ${it.class}" title="${it.title}" ${clickAction}>
+             <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title}${assigneesHtml}
+           </div>`;
+        }).join('');
+    };
+
+    const isMobile = window.innerWidth <= 768;
     
-    let dayCount = 1;
-    for (let i = 0; i < 42; i++) {
-        if (i < firstDayIndex || dayCount > daysInMonth) {
-            html += `<div class="calendar-cell other-month"></div>`;
-        } else {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}`;
+    if (isMobile) {
+        const dayOfWeek = currentCalendarDate.getDay() || 7;
+        const monday = new Date(currentCalendarDate);
+        monday.setDate(monday.getDate() - dayOfWeek + 1);
+        
+        for (let i = 0; i < 7; i++) {
+            const currentDay = new Date(monday);
+            currentDay.setDate(monday.getDate() + i);
+            const y = currentDay.getFullYear();
+            const m = currentDay.getMonth();
+            const d = currentDay.getDate();
+            const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const isToday = dateStr === new Date().toISOString().split('T')[0];
             const items = getItemsForDate(dateStr);
             
-            let itemsHtml = items.map(it => {
-               let assigneesHtml = '';
-               // Make array unique
-               const uniqueIds = [...new Set(it.assignedIds)];
-               uniqueIds.forEach(idStr => {
-                   if (idStr.startsWith('contact_')) {
-                       const c = storage.contacts.find(x => x.id === idStr.split('_')[1]);
-                       if (c) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${c.first}]</span>`;
-                   } else if (idStr.startsWith('team_')) {
-                       const t = (storage.teams||[]).find(x => x.id === idStr.split('_')[1]);
-                       if (t) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${t.name}]</span>`;
-                   }
-               });
-               let clickAction = '';
-               if (it.type === 'task') clickAction = `onclick="openDetail('task', '${it.d.id}')"`;
-               else if (it.type === 'project') clickAction = `onclick="openDetail('project', '${it.d.id}')"`;
-               else if (it.type === 'event') clickAction = `onclick="editItem('event', '${it.d.id}')"`;
-               
-               return `<div class="cal-event-badge ${it.class}" title="${it.title}" ${clickAction}>
-                 <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title}${assigneesHtml}
-               </div>`;
-            }).join('');
+            let itemsHtml = renderItemsHtml(items);
             
             html += `<div class="calendar-cell ${isToday ? 'today' : ''}">
-                <div class="calendar-date-label">${dayCount}</div>
+                <div class="calendar-date-label">${d} ${currentDay.toLocaleDateString('pl-PL', { month: 'short' })}</div>
                 ${itemsHtml}
             </div>`;
-            dayCount++;
+        }
+    } else {
+        const firstDayIndex = (new Date(year, month, 1).getDay() || 7) - 1; 
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        let dayCount = 1;
+        for (let i = 0; i < 42; i++) {
+            if (i < firstDayIndex || dayCount > daysInMonth) {
+                html += `<div class="calendar-cell other-month"></div>`;
+            } else {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}`;
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+                const items = getItemsForDate(dateStr);
+                
+                let itemsHtml = renderItemsHtml(items);
+                
+                html += `<div class="calendar-cell ${isToday ? 'today' : ''}">
+                    <div class="calendar-date-label">${dayCount}</div>
+                    ${itemsHtml}
+                </div>`;
+                dayCount++;
+            }
         }
     }
+    
+    grid.dataset.mobile = isMobile ? 'true' : '';
     grid.innerHTML = html;
     lucide.createIcons();
 }
