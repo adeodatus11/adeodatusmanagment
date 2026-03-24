@@ -16,47 +16,116 @@ let storage = {
 let editingId = null;
 let editingType = null;
 
-async function loadFromStorage() {
+let appPassword = null;
+
+function encryptData(data, pwd) {
+    return CryptoJS.AES.encrypt(JSON.stringify(data), pwd).toString();
+}
+
+function decryptData(ciphertext, pwd) {
+    try {
+        const bytes = CryptoJS.AES.decrypt(ciphertext, pwd);
+        const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decryptedStr) return null;
+        return JSON.parse(decryptedStr);
+    } catch (e) {
+        return null;
+    }
+}
+
+async function attemptLogin() {
+    const passInput = document.getElementById('login-password');
+    const pwd = passInput.value;
+    if (!pwd) return;
+    
+    document.getElementById('login-error').style.display = 'none';
+    const success = await loadFromStorage(pwd);
+    if (success) {
+        appPassword = pwd;
+        document.getElementById('login-overlay').style.display = 'none';
+        showView('dashboard');
+        
+        // Force re-save to ensure legacy data gets encrypted
+        const saved = localStorage.getItem('ams_data');
+        if (saved && !saved.includes('"payload"')) {
+            saveToStorage();
+        }
+    } else {
+        document.getElementById('login-error').style.display = 'block';
+    }
+}
+
+async function loadFromStorage(pwd) {
   const defaults = { areas: [], projects: [], tasks: [], logs: [], contacts: [], events: [], teams: [] };
   
-  // Najpierw pobieramy z chmury, która jest nadrzędnym zbiorem prawdy
   try {
       const res = await fetch('/api/sync');
       if (res.ok) {
           const cloudData = await res.json();
           if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
-              storage = { ...defaults, ...cloudData };
-              localStorage.setItem('ams_data', JSON.stringify(storage));
-              updateUI();
-              return; // Mamy dane z chmury, nie musimy polegać na wbudowanej pamięci
+              if (cloudData.payload) {
+                  const decrypted = decryptData(cloudData.payload, pwd);
+                  if (decrypted) {
+                      storage = { ...defaults, ...decrypted };
+                      localStorage.setItem('ams_data', JSON.stringify(cloudData));
+                      updateUI();
+                      return true;
+                  } else {
+                      return false; // błędne hasło
+                  }
+              } else {
+                  // legacy (niezaszyfrowane)
+                  storage = { ...defaults, ...cloudData };
+                  updateUI();
+                  return true;
+              }
           }
       }
   } catch(e) {
       console.log('Working offline / Cloud sync failed');
   }
 
-  // W przypadku gdy serwer z chmury był pusty / błąd - powrót do LocalStorage
   const saved = localStorage.getItem('ams_data');
   if (saved) {
-    storage = { ...defaults, ...JSON.parse(saved) };
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.payload) {
+          const decrypted = decryptData(parsed.payload, pwd);
+          if (decrypted) {
+              storage = { ...defaults, ...decrypted };
+              updateUI();
+              return true;
+          } else {
+              return false; // błędne hasło
+          }
+      } else {
+          storage = { ...defaults, ...parsed };
+          updateUI();
+          return true;
+      }
+    } catch(e) {
+      storage = { ...defaults };
+      return true; // pusta/uszkodzona baza
+    }
   } else {
-    // Gdy wszystko jest puste (nowe uruchomienie offline), przygotuj bazę
     storage = { ...defaults };
-    localStorage.setItem('ams_data', JSON.stringify(storage));
+    return true; // nowa pusta baza
   }
-  updateUI();
 }
 
 async function saveToStorage() {
-  localStorage.setItem('ams_data', JSON.stringify(storage));
+  if (!appPassword) return; // nie zapisujemy jeśli nie odblokowano
+  const payload = encryptData(storage, appPassword);
+  const dataToSave = { payload };
+  
+  localStorage.setItem('ams_data', JSON.stringify(dataToSave));
   updateUI();
   
-  // Save to cloud in background
   try {
       await fetch('/api/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(storage)
+          body: JSON.stringify(dataToSave)
       });
   } catch(e) {
       console.log('Offline / Cloud sync failed');
@@ -869,10 +938,12 @@ function editItem(type, id) {
 
 // --- EXPORT/IMPORT ---
 function exportData() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(storage, null, 2));
+    if (!appPassword) return;
+    const payload = encryptData(storage, appPassword);
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ payload }, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "ams_backup_" + new Date().toISOString().split('T')[0] + ".json");
+    downloadAnchorNode.setAttribute("download", "ams_backup_encrypted_" + new Date().toISOString().split('T')[0] + ".json");
     document.body.appendChild(downloadAnchorNode); 
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -885,7 +956,17 @@ function importData(event) {
     reader.onload = function(e) {
         try {
             const imported = JSON.parse(e.target.result);
-            if (imported && imported.areas !== undefined) {
+            if (imported.payload) {
+                const decrypted = decryptData(imported.payload, appPassword);
+                if (decrypted && decrypted.areas !== undefined) {
+                    storage = decrypted;
+                    saveToStorage();
+                    showToast('Dane zaimportowane pomyślnie! 🔄');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert('Błędne hasło chroniące plik lub plik uszkodzony!');
+                }
+            } else if (imported.areas !== undefined) {
                 storage = imported;
                 saveToStorage();
                 showToast('Dane zaimportowane pomyślnie! 🔄');
@@ -1036,8 +1117,8 @@ function updateUI() {
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-  loadFromStorage();
-  showView('dashboard');
+  const pwdInput = document.getElementById('login-password');
+  if (pwdInput) pwdInput.focus();
 });
 
 function closeDetailPanel() {
