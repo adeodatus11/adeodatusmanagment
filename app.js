@@ -270,7 +270,7 @@ function openModal(modalId) {
       populateTeamMembersCheckboxes();
   }
   if (modalId === 'addLog') {
-      populateLogRelationSelect('log-relation');
+      populateLogRelations();
   }
 }
 
@@ -720,8 +720,9 @@ function saveLog() {
     const desc = document.getElementById('log-desc').value;
     if (!desc) return alert('Opis jest wymagany');
     
-    const relInput = document.getElementById('log-relation');
-    const parentId = relInput ? relInput.value : '';
+    const areaId = document.getElementById('log-area') ? document.getElementById('log-area').value : '';
+    const projectId = document.getElementById('log-project') ? document.getElementById('log-project').value : '';
+    const taskId = document.getElementById('log-task') ? document.getElementById('log-task').value : '';
     
     if (editingId && editingType === 'log') {
         const l = storage.logs.find(x => x.id === editingId);
@@ -729,7 +730,9 @@ function saveLog() {
             l.desc = desc;
             l.date = document.getElementById('log-date').value || l.date;
             l.type = document.getElementById('log-type').value;
-            l.parentId = parentId;
+            l.areaId = areaId;
+            l.projectId = projectId;
+            l.taskId = taskId;
         }
         showToast('Wpis do dziennika zaktualizowany! 📋');
     } else {
@@ -738,7 +741,9 @@ function saveLog() {
             desc,
             date: document.getElementById('log-date').value || new Date().toISOString().split('T')[0],
             type: document.getElementById('log-type').value,
-            parentId: parentId
+            areaId: areaId,
+            projectId: projectId,
+            taskId: taskId
         });
         showToast('Wpis do dziennika zapisany! 📋');
     }
@@ -889,8 +894,12 @@ function editItem(type, id) {
         document.querySelector('#modal-addLog h2').innerText = 'Edycja Logu';
         // Wait for parent DOM
         setTimeout(() => {
-            const relSelect = document.getElementById('log-relation');
-            if(relSelect) relSelect.value = l.parentId || '';
+            const relArea = document.getElementById('log-area');
+            const relProj = document.getElementById('log-project');
+            const relTask = document.getElementById('log-task');
+            if(relArea) relArea.value = l.areaId || (l.parentId && storage.areas.some(a=>a.id===l.parentId) ? l.parentId : '');
+            if(relProj) relProj.value = l.projectId || (l.parentId && storage.projects.some(p=>p.id===l.parentId) ? l.parentId : '');
+            if(relTask) relTask.value = l.taskId || (l.parentId && storage.tasks.some(t=>t.id===l.parentId) ? l.parentId : '');
         }, 10);
     }
     else if (type === 'contact') {
@@ -982,27 +991,25 @@ function importData(event) {
 }
 
 // --- SELECT BOX HELPERS ---
-function populateLogRelationSelect(id) {
-    const select = document.getElementById(id);
-    if (!select) return;
-    let html = '<option value="">-- Brak powiązania --</option>';
-    
-    if (storage.areas.length > 0) {
-        html += '<optgroup label="Obszary">';
-        storage.areas.forEach(a => html += `<option value="${a.id}">Obszar: ${a.name}</option>`);
-        html += '</optgroup>';
+function populateLogRelations() {
+    const sArea = document.getElementById('log-area');
+    const sProj = document.getElementById('log-project');
+    const sTask = document.getElementById('log-task');
+    if (sArea) {
+        let html = '<option value="">-- Brak --</option>';
+        storage.areas.forEach(a => html += `<option value="${a.id}">${a.name}</option>`);
+        sArea.innerHTML = html;
     }
-    if (storage.projects.length > 0) {
-        html += '<optgroup label="Projekty">';
-        storage.projects.forEach(p => html += `<option value="${p.id}">Projekt: ${p.name}</option>`);
-        html += '</optgroup>';
+    if (sProj) {
+        let html = '<option value="">-- Brak --</option>';
+        storage.projects.forEach(p => html += `<option value="${p.id}">${p.name}</option>`);
+        sProj.innerHTML = html;
     }
-    if (storage.tasks.length > 0) {
-        html += '<optgroup label="Zadania">';
-        storage.tasks.forEach(t => html += `<option value="${t.id}">Zadanie: ${t.name}</option>`);
-        html += '</optgroup>';
+    if (sTask) {
+        let html = '<option value="">-- Brak --</option>';
+        storage.tasks.forEach(t => html += `<option value="${t.id}">${t.name}</option>`);
+        sTask.innerHTML = html;
     }
-    select.innerHTML = html;
 }
 
 function renderAssigneeCheckboxes(containerId, inputClass, selectedArray = []) {
@@ -1160,7 +1167,12 @@ function openDetail(type, id) {
   
   // Helper to render Logs section
   const renderRelatedLogs = (parentId) => {
-      const relatedLogs = storage.logs.filter(l => l.parentId && String(l.parentId) === String(parentId));
+      const relatedLogs = storage.logs.filter(l => 
+          (l.parentId && String(l.parentId) === String(parentId)) ||
+          (l.areaId && String(l.areaId) === String(parentId)) ||
+          (l.projectId && String(l.projectId) === String(parentId)) ||
+          (l.taskId && String(l.taskId) === String(parentId))
+      );
       let lh = `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:#f4f4f5;"><i data-lucide="clipboard-list" style="width:16px;height:16px;"></i> Powiązane Logi (${relatedLogs.length})</h3>`;
       if(relatedLogs.length === 0) lh += '<p style="font-size:13px;color:#a1a1aa;">Brak powiązanych logów i wpisów pamiętnika.</p>';
       else {
