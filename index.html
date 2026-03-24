@@ -263,8 +263,8 @@
           <p class="view-subtitle">Kalendarze, deadline'y, spotkania</p>
         </div>
         <div style="display:flex; gap:8px;">
-          <button class="btn-secondary" onclick="changeMonth(-1)"><i data-lucide="chevron-left"></i></button>
-          <button class="btn-secondary" onclick="changeMonth(1)"><i data-lucide="chevron-right"></i></button>
+          <button class="btn-secondary" onclick="changePeriod(-1)"><i data-lucide="chevron-left"></i></button>
+          <button class="btn-secondary" onclick="changePeriod(1)"><i data-lucide="chevron-right"></i></button>
           <button class="btn-primary" onclick="openModal('addEvent')">+ Termin</button>
         </div>
       </header>
@@ -441,12 +441,8 @@
       </div>
       <label>Opis *</label>
       <textarea id="log-desc" class="form-input" rows="4" placeholder="np. Mail do partnera w sprawie harmonogramu WP2..."></textarea>
-      <label>Powiąż z projektem</label>
-      <select id="log-project" class="form-input"><option value="">-- Opcjonalnie --</option></select>
-      <label>Powiąż z zadaniem</label>
-      <select id="log-task" class="form-input"><option value="">-- Opcjonalnie --</option></select>
-      <label>Powiąż z osobą</label>
-      <select id="log-contact" class="form-input"><option value="">-- Opcjonalnie --</option></select>
+      <label>Powiąż (Opcjonalnie)</label>
+      <select id="log-relation" class="form-input"></select>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
@@ -485,9 +481,18 @@
     <div class="modal-body">
       <label>Tytuł *</label>
       <input type="text" id="event-title" class="form-input" placeholder="np. Spotkanie partnerów Hamburg">
+      <div class="form-row" style="margin-bottom:10px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--text-muted);">
+          <input type="checkbox" id="event-allday" style="width:16px; height:16px; accent-color:var(--accent);" onchange="toggleEventTimes(this)"> <span style="font-size:14px;">Wydarzenie całodniowe</span>
+        </label>
+      </div>
       <div class="form-row">
-        <div><label>Data *</label><input type="date" id="event-date" class="form-input"></div>
-        <div><label>Godzina</label><input type="time" id="event-time" class="form-input"></div>
+        <div><label>Od (Data *)</label><input type="date" id="event-date" class="form-input"></div>
+        <div><label>Od (Godzina)</label><input type="time" id="event-time" class="form-input"></div>
+      </div>
+      <div class="form-row">
+        <div><label>Do (Data)</label><input type="date" id="event-end-date" class="form-input"></div>
+        <div><label>Do (Godzina)</label><input type="time" id="event-end-time" class="form-input"></div>
       </div>
       <label>Powiąż z projektem</label>
       <select id="event-project" class="form-input"><option value="">-- Opcjonalnie --</option></select>

@@ -522,3 +522,28 @@ select.form-input { appearance: none; background-image: url("data:image/svg+xml,
 @media (max-width: 900px) {
   .detail-panel { width: 100vw; }
 }
+
+@media (max-width: 768px) {
+  .calendar-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    background: transparent;
+    border: none;
+  }
+  .calendar-cell {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    min-height: 80px;
+    padding: 12px;
+  }
+  .calendar-date-label {
+    text-align: left;
+    font-size: 1.1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .calendar-day-header {
+    display: none;
+  }
+}

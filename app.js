@@ -131,6 +131,15 @@ function showView(viewId, filter = null) {
   if (viewId === 'calendar') renderEvents();
 }
 
+function toggleEventTimes(checkbox) {
+    document.getElementById('event-time').disabled = checkbox.checked;
+    document.getElementById('event-end-time').disabled = checkbox.checked;
+    if(checkbox.checked) {
+        document.getElementById('event-time').value = '';
+        document.getElementById('event-end-time').value = '';
+    }
+}
+
 // --- SIDEBAR TOGGLE ---
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
@@ -405,10 +414,21 @@ function renderContacts() {
 
 let currentCalendarDate = new Date();
 
-function changeMonth(offset) {
-    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+function changePeriod(offset) {
+    if (window.innerWidth <= 768) {
+        currentCalendarDate.setDate(currentCalendarDate.getDate() + (offset * 7));
+    } else {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    }
     renderEvents();
 }
+
+window.addEventListener('resize', () => {
+    if ((window.innerWidth <= 768 && !document.getElementById('monthly-calendar-grid').dataset.mobile) ||
+        (window.innerWidth > 768 && document.getElementById('monthly-calendar-grid').dataset.mobile)) {
+        renderEvents();
+    }
+});
 
 function renderEvents() {
     const grid = document.getElementById('monthly-calendar-grid');
@@ -423,7 +443,15 @@ function renderEvents() {
     // Generate events per day
     const getItemsForDate = (dateStr) => {
         let items = [];
-        storage.events.forEach(e => { if (e.date === dateStr) items.push({ type: 'event', title: e.title, d: e, icon: 'calendar-heart', class: 'cal-event', assignedIds: [] }); });
+        storage.events.forEach(e => { 
+            const startStr = e.date || '';
+            const endStr = e.endDate || startStr;
+            if (startStr && dateStr >= startStr && dateStr <= endStr) {
+                const isStart = dateStr === startStr;
+                const timePrefix = (!e.isAllDay && isStart && e.time) ? `${e.time} ` : '';
+                items.push({ type: 'event', title: timePrefix + e.title, d: e, icon: 'calendar-heart', class: 'cal-event', assignedIds: [] }); 
+            }
+        });
         storage.tasks.forEach(t => { if (t.dueDate === dateStr) items.push({ type: 'task', title: `${t.name}`, d: t, icon: 'check-square', class: 'cal-task', assignedIds: [...(t.owners||[]), ...(t.workers||[]), ...(t.assignee?[t.assignee]:[])] }); });
         storage.projects.forEach(p => { if (p.deadline === dateStr) items.push({ type: 'project', title: `${p.name}`, d: p, icon: 'folder', class: 'cal-project', assignedIds: [...(p.owners||[]), ...(p.workers||[]), ...(p.assignee?[p.assignee]:[])] }); });
         return items;
@@ -652,20 +680,34 @@ function saveEvent() {
     const title = document.getElementById('event-title').value;
     if (!title) return alert('Tytuł jest wymagany');
     
+    const isAllDay = document.getElementById('event-allday').checked;
+    const date = document.getElementById('event-date').value;
+    const time = document.getElementById('event-time').value;
+    const endDate = document.getElementById('event-end-date').value || date; // fallback to start date
+    const endTime = document.getElementById('event-end-time').value;
+    
+    if (!date) return alert('Data rozpoczęcia jest wymagana');
+    
     if (editingId && editingType === 'event') {
         const e = storage.events.find(x => x.id === editingId);
         if (e) {
             e.title = title;
-            e.date = document.getElementById('event-date').value;
-            e.time = document.getElementById('event-time').value;
+            e.date = date;
+            e.time = time;
+            e.endDate = endDate;
+            e.endTime = endTime;
+            e.isAllDay = isAllDay;
         }
         showToast('Wydarzenie zaktualizowane! 📅');
     } else {
         storage.events.push({
             id: generateId(),
             title,
-            date: document.getElementById('event-date').value,
-            time: document.getElementById('event-time').value
+            date,
+            time,
+            endDate,
+            endTime,
+            isAllDay
         });
         showToast('Wydarzenie zapisane! 📅');
     }
@@ -784,6 +826,11 @@ function editItem(type, id) {
         document.getElementById('event-title').value = e.title;
         document.getElementById('event-date').value = e.date || '';
         document.getElementById('event-time').value = e.time || '';
+        document.getElementById('event-end-date').value = e.endDate || e.date || '';
+        document.getElementById('event-end-time').value = e.endTime || '';
+        const allDayCheck = document.getElementById('event-allday');
+        allDayCheck.checked = !!e.isAllDay;
+        toggleEventTimes(allDayCheck);
         document.querySelector('#modal-addEvent h2').innerText = 'Edycja Wydarzenia';
     }
 }
