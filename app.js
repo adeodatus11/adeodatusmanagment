@@ -272,6 +272,10 @@ function openModal(modalId) {
   if (modalId === 'addLog') {
       populateLogRelations();
   }
+  if (modalId === 'aiSettings') {
+      const key = localStorage.getItem('gemini_api_key');
+      if (key) document.getElementById('gemini-api-key').value = key;
+  }
 }
 
 function closeAllModals() {
@@ -1307,9 +1311,20 @@ function addTaskStep() {
 }
 
 // --- SPEECH TO TEXT (DARMOWE) ---
+let currentRecognition = null;
+
 function startDictation(inputId, btnId) {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         showToast('Twoja przeglądarka nie obsługuje dyktowania głosowego. Użyj Chrome lub Edge.');
+        return;
+    }
+
+    const btn = document.getElementById(btnId);
+    const inputEl = document.getElementById(inputId);
+
+    // Jeśli już nagrywamy, drugie kliknięcie zatrzymuje
+    if (currentRecognition) {
+        currentRecognition.stop();
         return;
     }
 
@@ -1317,26 +1332,32 @@ function startDictation(inputId, btnId) {
     const recognition = new SpeechRecognition();
 
     recognition.lang = 'pl-PL';
+    recognition.continuous = true; // nie przerywaj nasłuchiwania na pauzach
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
 
-    const btn = document.getElementById(btnId);
-    const inputEl = document.getElementById(inputId);
-    const originalHtml = btn.innerHTML;
+    const originalHtml = `<i data-lucide="mic" style="width:12px; height:12px;"></i> Dyktuj`;
 
     recognition.onstart = function() {
-        btn.innerHTML = '<i data-lucide="mic" style="width:12px; height:12px; color: var(--danger);"></i> Słucham...';
+        btn.innerHTML = '<i data-lucide="square" style="width:12px; height:12px; color: var(--danger);"></i> Zatrzymaj';
         btn.style.borderColor = 'var(--danger)';
         if (window.lucide) lucide.createIcons();
     };
 
     recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        if (inputEl.value) {
-            inputEl.value += ' ' + transcript;
-        } else {
-            // uppercase first letter
-            inputEl.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                transcript += event.results[i][0].transcript + ' ';
+            }
+        }
+        
+        transcript = transcript.trim();
+        if (transcript) {
+            if (inputEl.value) {
+                inputEl.value += ' ' + transcript;
+            } else {
+                inputEl.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+            }
         }
     };
 
@@ -1344,16 +1365,76 @@ function startDictation(inputId, btnId) {
         console.error('Błąd dyktowania:', event.error);
         if (event.error === 'not-allowed') {
             showToast('Musisz zezwolić przeglądarce na dostęp do mikrofonu.');
-        } else {
+        } else if (event.error !== 'no-speech') {
             showToast('Przerwano nasłuchiwanie.');
         }
     };
 
-    recognition.onend = function() {
-        btn.innerHTML = originalHtml;
-        btn.style.borderColor = 'rgba(255,255,255,0.3)';
-        if (window.lucide) lucide.createIcons();
+    recognition.onceFormatted = false;
+
+    recognition.onend = async function() {
+        currentRecognition = null;
+        if(btn) {
+            btn.innerHTML = '<i data-lucide="sparkles" style="width:12px; height:12px; color:#a855f7;"></i> AI pracuje...';
+            btn.style.borderColor = '#a855f7';
+            if (window.lucide) lucide.createIcons();
+
+            // Format text if there's an API key
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (apiKey && inputEl.value.trim() && !recognition.onceFormatted) {
+                recognition.onceFormatted = true; // prevent double runs
+                inputEl.value = await formatWithGemini(inputEl.value);
+            }
+
+            btn.innerHTML = originalHtml;
+            btn.style.borderColor = 'rgba(255,255,255,0.3)';
+            if (window.lucide) lucide.createIcons();
+        }
     };
 
+    currentRecognition = recognition;
     recognition.start();
+}
+
+// --- AI INTEGRATION ---
+function saveAiKey() {
+    const key = document.getElementById('gemini-api-key').value.trim();
+    if (key) {
+        localStorage.setItem('gemini_api_key', key);
+        showToast('Klucz API zapisany! ✨');
+    } else {
+        localStorage.removeItem('gemini_api_key');
+        showToast('Klucz API został usunięty.');
+    }
+    closeAllModals();
+}
+
+async function formatWithGemini(text) {
+    const apiKey = localStorage.getItem('gemini_api_key');
+    if (!apiKey) return text; 
+    
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: "Jesteś osobistym asystentem pomagającym formatować notatki ze zgłoszeń w systemie zarządzania zadaniami. Otrzymasz poniżej 'brudny' tekst nagrany z mowy. \nTwoje zadanie to sformatować go, poprawić literówki gramatykę, usunąć ewentualne zająknięcia (np. yyy, eee), dodać znaki przestankowe. \nNIE ZMIENIAJ znaczenia ani ogólnego wydźwięku, tylko uporządkuj tekst żeby był czytelny w dzienniku logów. \nZwróć TYLKO wynikowy tekst, żadnych innych komentarzy.\nTekst do sformatowania:\n\n" + text
+                    }]
+                }]
+            })
+        });
+        
+        if (!response.ok) throw new Error('Błąd autoryzacji lub limitu zapytań');
+        const data = await response.json();
+        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+            return data.candidates[0].content.parts[0].text.trim();
+        }
+        return text;
+    } catch (e) {
+        console.error('Gemini error:', e);
+        showToast('Błąd formatowania przez AI.');
+        return text;
+    }
 }

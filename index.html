@@ -61,6 +61,7 @@
         <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="exportData()"><i data-lucide="download"></i> Eksport danych</button>
         <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="document.getElementById('import-file').click()"><i data-lucide="upload"></i> Import danych</button>
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
+        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center; margin-top:8px;" onclick="openModal('aiSettings')"><i data-lucide="sparkles" style="color:#a855f7;"></i> Ustawienia AI</button>
       </div>
     </div>
   </aside>
@@ -300,6 +301,20 @@
 
   <!-- ===== MODALS ===== -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+
+  <!-- AI Settings Modal -->
+  <div class="modal" id="modal-aiSettings">
+    <div class="modal-header"><h2>Ustawienia Sztucznej Inteligencji</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px; line-height:1.4;">Wklej poniżej swój darmowy klucz do Google Gemini API. Będzie on bezpiecznie przechowywany tylko w Twojej przeglądarce i wykorzystany do modyfikowania i formatowania Twojego podyktowanego tekstu.</p>
+      <label>Google Gemini API Key</label>
+      <input type="password" id="gemini-api-key" class="form-input" placeholder="Wklej klucz zaczynający się od AIza...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveAiKey()">Zapisz Klucz</button>
+    </div>
+  </div>
 
   <!-- Add Team Modal -->
   <div class="modal" id="modal-addTeam">
