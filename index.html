@@ -45,6 +45,11 @@
     <div class="sidebar-bottom">
       <button class="btn-quick btn-quick-task" onclick="openModal('addTask')">+ Zadanie</button>
       <button class="btn-quick btn-quick-log" onclick="openModal('addLog')">+ Log</button>
+      <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px;" onclick="exportData()">💾 Eksport danych</button>
+        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px;" onclick="document.getElementById('import-file').click()">📂 Import danych</button>
+        <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
+      </div>
     </div>
   </aside>
 

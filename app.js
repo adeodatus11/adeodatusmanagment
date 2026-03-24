@@ -13,18 +13,49 @@ let storage = {
   events: []
 };
 
-function loadFromStorage() {
+let editingId = null;
+let editingType = null;
+
+async function loadFromStorage() {
   const saved = localStorage.getItem('ams_data');
   if (saved) {
     storage = JSON.parse(saved);
   } else {
     seedInitialData();
   }
+  updateUI();
+
+  // Try fetching from the cloud
+  try {
+      const res = await fetch('/api/sync');
+      if (res.ok) {
+          const cloudData = await res.json();
+          // If cloud has data, it's the source of truth
+          if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
+              storage = cloudData;
+              localStorage.setItem('ams_data', JSON.stringify(storage));
+              updateUI();
+          }
+      }
+  } catch(e) {
+      console.log('Working offline / No DB configured');
+  }
 }
 
-function saveToStorage() {
+async function saveToStorage() {
   localStorage.setItem('ams_data', JSON.stringify(storage));
   updateUI();
+  
+  // Save to cloud in background
+  try {
+      await fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(storage)
+      });
+  } catch(e) {
+      console.log('Offline / Cloud sync failed');
+  }
 }
 
 function showToast(message) {
@@ -44,13 +75,8 @@ function clearInputs(parent) {
 }
 
 function seedInitialData() {
-  storage.areas = [
-    { id: 'a1', name: 'WIN4SMEs', color: '#6366f1', desc: 'Projekt WIN4SMEs' },
-    { id: 'a2', name: 'COVE Polska', color: '#10b981', desc: 'Centra Doskonałości Zawodowej' }
-  ];
-  storage.projects = [
-    { id: 'p1', areaId: 'a1', name: 'Zarządzanie WP1', status: 'W toku', priority: 'Wysoki' }
-  ];
+  storage.areas = [];
+  storage.projects = [];
   saveToStorage();
 }
 
@@ -127,7 +153,22 @@ function closeSidebar() {
 // --- MODAL MANAGEMENT ---
 function openModal(modalId) {
   document.getElementById('modal-overlay').classList.add('open');
-  document.getElementById(`modal-${modalId}`).classList.add('open');
+  const modal = document.getElementById(`modal-${modalId}`);
+  modal.classList.add('open');
+  
+  if (!editingId) {
+      clearInputs(modal);
+      // Reset titles for creation mode
+      const titleEl = modal.querySelector('h2');
+      if (titleEl) {
+        if (modalId === 'addArea') titleEl.innerText = 'Nowy Obszar Działalności';
+        if (modalId === 'addProject') titleEl.innerText = 'Nowy Projekt / Działanie';
+        if (modalId === 'addTask') titleEl.innerText = 'Nowe Zadanie';
+        if (modalId === 'addLog') titleEl.innerText = 'Nowy Wpis do Dziennika';
+        if (modalId === 'addContact') titleEl.innerText = 'Nowa Osoba';
+        if (modalId === 'addEvent') titleEl.innerText = 'Nowe Wydarzenie / Termin';
+      }
+  }
   
   // Populate select boxes if needed
   if (modalId === 'addProject') populateAreaSelect('proj-area');
@@ -140,6 +181,8 @@ function openModal(modalId) {
 function closeAllModals() {
   document.getElementById('modal-overlay').classList.remove('open');
   document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+  editingId = null;
+  editingType = null;
 }
 
 // --- RENDERERS ---
@@ -219,6 +262,10 @@ function renderAreas() {
     <div class="area-card" style="--area-color: ${a.color}">
       <div class="area-name">${a.name}</div>
       <div class="area-desc">${a.desc || ''}</div>
+      <div class="action-btns" style="margin-top:10px; display:flex; gap:8px;">
+        <button onclick="event.stopPropagation(); editItem('area', '${a.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; font-size:14px; text-decoration:underline;">Edytuj</button>
+        <button onclick="event.stopPropagation(); deleteItem('area', '${a.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; font-size:14px; text-decoration:underline;">Usuń</button>
+      </div>
     </div>
   `).join('');
 }
@@ -242,8 +289,12 @@ function renderProjects() {
           <span>${getAreaName(p.areaId)}</span>
         </div>
       </div>
-      <div class="task-card-right">
+      <div class="task-card-right" style="text-align:right;">
         <span class="badge ${getStatusClass(p.status)}">${p.status}</span>
+        <div style="margin-top:6px; font-size:13px;">
+          <button onclick="event.stopPropagation(); editItem('project', '${p.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
+          <button onclick="event.stopPropagation(); deleteItem('project', '${p.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -264,9 +315,13 @@ function renderTasks(filter = null) {
           <span>${getProjectName(t.projectId)}</span>
         </div>
       </div>
-      <div class="task-card-right">
+      <div class="task-card-right" style="text-align:right;">
         <span class="badge ${getStatusClass(t.status)}">${t.status}</span>
-        <span class="task-due">${formatDate(t.dueDate)}</span>
+        <span class="task-due" style="display:block; margin-top:2px;">${formatDate(t.dueDate)}</span>
+        <div style="margin-top:6px; font-size:13px;">
+          <button onclick="event.stopPropagation(); editItem('task', '${t.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
+          <button onclick="event.stopPropagation(); deleteItem('task', '${t.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -282,6 +337,10 @@ function renderLog() {
                     <span class="timeline-date">${formatDate(l.date)}</span>
                 </div>
                 <div class="timeline-desc">${l.desc}</div>
+                <div style="margin-top:6px; font-size:13px;">
+                  <button onclick="event.stopPropagation(); editItem('log', '${l.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
+                  <button onclick="event.stopPropagation(); deleteItem('log', '${l.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+                </div>
             </div>
         </div>
     `).join('');
@@ -294,6 +353,10 @@ function renderContacts() {
             <div class="contact-name">${c.first} ${c.last}</div>
             <div class="contact-org">${c.org || ''}</div>
             <div class="contact-role">${c.role || ''}</div>
+            <div style="margin-top:10px; font-size:13px; border-top: 1px solid #eee; padding-top:8px;">
+              <button onclick="event.stopPropagation(); editItem('contact', '${c.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
+              <button onclick="event.stopPropagation(); deleteItem('contact', '${c.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+            </div>
         </div>
     `).join('');
 }
@@ -305,8 +368,12 @@ function renderEvents() {
             <div class="task-card-left">
                 <div class="task-card-name">${e.title}</div>
             </div>
-            <div class="task-card-right">
+            <div class="task-card-right" style="text-align:right;">
                 <span class="task-due">${formatDate(e.date)} ${e.time || ''}</span>
+                <div style="margin-top:6px; font-size:13px;">
+                  <button onclick="event.stopPropagation(); editItem('event', '${e.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
+                  <button onclick="event.stopPropagation(); deleteItem('event', '${e.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+                </div>
             </div>
         </div>
     `).join('');
@@ -318,17 +385,25 @@ function saveArea() {
   const name = document.getElementById('area-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
-  storage.areas.push({
-    id: generateId(),
-    name,
-    desc: document.getElementById('area-desc').value,
-    color: '#6366f1'
-  });
+  if (editingId && editingType === 'area') {
+      const a = storage.areas.find(x => x.id === editingId);
+      if (a) {
+          a.name = name;
+          a.desc = document.getElementById('area-desc').value;
+      }
+      showToast('Obszar został zaktualizowany! ✅');
+  } else {
+      storage.areas.push({
+        id: generateId(),
+        name,
+        desc: document.getElementById('area-desc').value,
+        color: '#6366f1' // simple default color 
+      });
+      showToast('Obszar został zapisany! ✅');
+  }
   
   saveToStorage();
-  clearInputs(modal);
   closeAllModals();
-  showToast('Obszar został zapisany! ✅');
 }
 
 function saveProject() {
@@ -336,21 +411,34 @@ function saveProject() {
   const name = document.getElementById('proj-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
-  storage.projects.push({
-    id: generateId(),
-    areaId: document.getElementById('proj-area').value,
-    name,
-    desc: document.getElementById('proj-desc').value,
-    status: document.getElementById('proj-status').value,
-    priority: document.getElementById('proj-priority').value,
-    start: document.getElementById('proj-start').value,
-    end: document.getElementById('proj-end').value
-  });
+  if (editingId && editingType === 'project') {
+      const p = storage.projects.find(x => x.id === editingId);
+      if (p) {
+          p.areaId = document.getElementById('proj-area').value;
+          p.name = name;
+          p.desc = document.getElementById('proj-desc').value;
+          p.status = document.getElementById('proj-status').value;
+          p.priority = document.getElementById('proj-priority').value;
+          p.start = document.getElementById('proj-start').value;
+          p.end = document.getElementById('proj-end').value;
+      }
+      showToast('Projekt zaktualizowany! 📁');
+  } else {
+      storage.projects.push({
+        id: generateId(),
+        areaId: document.getElementById('proj-area').value,
+        name,
+        desc: document.getElementById('proj-desc').value,
+        status: document.getElementById('proj-status').value,
+        priority: document.getElementById('proj-priority').value,
+        start: document.getElementById('proj-start').value,
+        end: document.getElementById('proj-end').value
+      });
+      showToast('Projekt został zapisany! 📁');
+  }
   
   saveToStorage();
-  clearInputs(modal);
   closeAllModals();
-  showToast('Projekt został zapisany! 📁');
 }
 
 function saveTask() {
@@ -358,20 +446,32 @@ function saveTask() {
   const name = document.getElementById('task-name').value;
   if (!name) return alert('Nazwa jest wymagana');
   
-  storage.tasks.push({
-    id: generateId(),
-    projectId: document.getElementById('task-project').value,
-    name,
-    desc: document.getElementById('task-desc').value,
-    status: document.getElementById('task-status').value,
-    dueDate: document.getElementById('task-due').value,
-    progress: document.getElementById('task-progress').value
-  });
+  if (editingId && editingType === 'task') {
+      const t = storage.tasks.find(x => x.id === editingId);
+      if (t) {
+          t.projectId = document.getElementById('task-project').value;
+          t.name = name;
+          t.desc = document.getElementById('task-desc').value;
+          t.status = document.getElementById('task-status').value;
+          t.dueDate = document.getElementById('task-due').value;
+          t.progress = document.getElementById('task-progress').value;
+      }
+      showToast('Zadanie zaktualizowane! ✅');
+  } else {
+      storage.tasks.push({
+        id: generateId(),
+        projectId: document.getElementById('task-project').value,
+        name,
+        desc: document.getElementById('task-desc').value,
+        status: document.getElementById('task-status').value,
+        dueDate: document.getElementById('task-due').value,
+        progress: document.getElementById('task-progress').value
+      });
+      showToast('Zadanie zostało zapisane! ✅');
+  }
   
   saveToStorage();
-  clearInputs(modal);
   closeAllModals();
-  showToast('Zadanie zostało zapisane! ✅');
 }
 
 function saveLog() {
@@ -379,17 +479,26 @@ function saveLog() {
     const desc = document.getElementById('log-desc').value;
     if (!desc) return alert('Opis jest wymagany');
     
-    storage.logs.push({
-        id: generateId(),
-        desc,
-        date: document.getElementById('log-date').value || new Date().toISOString().split('T')[0],
-        type: document.getElementById('log-type').value
-    });
+    if (editingId && editingType === 'log') {
+        const l = storage.logs.find(x => x.id === editingId);
+        if (l) {
+            l.desc = desc;
+            l.date = document.getElementById('log-date').value || l.date;
+            l.type = document.getElementById('log-type').value;
+        }
+        showToast('Wpis do dziennika zaktualizowany! 📋');
+    } else {
+        storage.logs.push({
+            id: generateId(),
+            desc,
+            date: document.getElementById('log-date').value || new Date().toISOString().split('T')[0],
+            type: document.getElementById('log-type').value
+        });
+        showToast('Wpis do dziennika zapisany! 📋');
+    }
     
     saveToStorage();
-    clearInputs(modal);
     closeAllModals();
-    showToast('Wpis do dziennika zapisany! 📋');
 }
 
 function saveContact() {
@@ -398,17 +507,27 @@ function saveContact() {
     const last = document.getElementById('contact-last').value;
     if (!first || !last) return alert('Imię i nazwisko są wymagane');
     
-    storage.contacts.push({
-        id: generateId(),
-        first, last,
-        org: document.getElementById('contact-org').value,
-        role: document.getElementById('contact-role').value
-    });
+    if (editingId && editingType === 'contact') {
+        const c = storage.contacts.find(x => x.id === editingId);
+        if (c) {
+            c.first = first;
+            c.last = last;
+            c.org = document.getElementById('contact-org').value;
+            c.role = document.getElementById('contact-role').value;
+        }
+        showToast('Dane osoby zaktualizowane! 👥');
+    } else {
+        storage.contacts.push({
+            id: generateId(),
+            first, last,
+            org: document.getElementById('contact-org').value,
+            role: document.getElementById('contact-role').value
+        });
+        showToast('Osoba zapisana do bazy! 👥');
+    }
     
     saveToStorage();
-    clearInputs(modal);
     closeAllModals();
-    showToast('Osoba zapisana do bazy! 👥');
 }
 
 function saveEvent() {
@@ -416,17 +535,139 @@ function saveEvent() {
     const title = document.getElementById('event-title').value;
     if (!title) return alert('Tytuł jest wymagany');
     
-    storage.events.push({
-        id: generateId(),
-        title,
-        date: document.getElementById('event-date').value,
-        time: document.getElementById('event-time').value
-    });
+    if (editingId && editingType === 'event') {
+        const e = storage.events.find(x => x.id === editingId);
+        if (e) {
+            e.title = title;
+            e.date = document.getElementById('event-date').value;
+            e.time = document.getElementById('event-time').value;
+        }
+        showToast('Wydarzenie zaktualizowane! 📅');
+    } else {
+        storage.events.push({
+            id: generateId(),
+            title,
+            date: document.getElementById('event-date').value,
+            time: document.getElementById('event-time').value
+        });
+        showToast('Wydarzenie zapisane! 📅');
+    }
     
     saveToStorage();
-    clearInputs(modal);
     closeAllModals();
-    showToast('Wydarzenie zapisane! 📅');
+}
+
+// --- CRUD HELPER METHODS ---
+function deleteItem(type, id) {
+    if (!confirm('Czy na pewno chcesz usunąć ten element?')) return;
+    if (type === 'area') storage.areas = storage.areas.filter(a => a.id !== id);
+    if (type === 'project') storage.projects = storage.projects.filter(p => p.id !== id);
+    if (type === 'task') storage.tasks = storage.tasks.filter(t => t.id !== id);
+    if (type === 'log') storage.logs = storage.logs.filter(l => l.id !== id);
+    if (type === 'contact') storage.contacts = storage.contacts.filter(c => c.id !== id);
+    if (type === 'event') storage.events = storage.events.filter(e => e.id !== id);
+    saveToStorage();
+    showToast('Element usunięty!');
+}
+
+function editItem(type, id) {
+    editingId = id;
+    editingType = type;
+    
+    if (type === 'area') {
+        const a = storage.areas.find(x => x.id === id);
+        if(!a) return;
+        openModal('addArea');
+        document.getElementById('area-name').value = a.name;
+        document.getElementById('area-desc').value = a.desc || '';
+        document.querySelector('#modal-addArea h2').innerText = 'Edycja Obszaru';
+    }
+    else if (type === 'project') {
+        const p = storage.projects.find(x => x.id === id);
+        if(!p) return;
+        openModal('addProject');
+        document.getElementById('proj-area').value = p.areaId;
+        document.getElementById('proj-name').value = p.name;
+        document.getElementById('proj-desc').value = p.desc || '';
+        document.getElementById('proj-status').value = p.status || 'Zaplanowane';
+        document.getElementById('proj-priority').value = p.priority || 'Normalny';
+        document.getElementById('proj-start').value = p.start || '';
+        document.getElementById('proj-end').value = p.end || '';
+        document.querySelector('#modal-addProject h2').innerText = 'Edycja Projektu';
+    }
+    else if (type === 'task') {
+        const t = storage.tasks.find(x => x.id === id);
+        if(!t) return;
+        openModal('addTask');
+        document.getElementById('task-project').value = t.projectId;
+        document.getElementById('task-name').value = t.name;
+        document.getElementById('task-desc').value = t.desc || '';
+        document.getElementById('task-status').value = t.status || 'W toku';
+        document.getElementById('task-due').value = t.dueDate || '';
+        document.getElementById('task-progress').value = t.progress || 0;
+        document.querySelector('#modal-addTask h2').innerText = 'Edycja Zadania';
+    }
+    else if (type === 'log') {
+        const l = storage.logs.find(x => x.id === id);
+        if(!l) return;
+        openModal('addLog');
+        document.getElementById('log-type').value = l.type || 'Inne';
+        document.getElementById('log-date').value = l.date || '';
+        document.getElementById('log-desc').value = l.desc || '';
+        document.querySelector('#modal-addLog h2').innerText = 'Edycja Logu';
+    }
+    else if (type === 'contact') {
+        const c = storage.contacts.find(x => x.id === id);
+        if(!c) return;
+        openModal('addContact');
+        document.getElementById('contact-first').value = c.first;
+        document.getElementById('contact-last').value = c.last;
+        document.getElementById('contact-org').value = c.org || '';
+        document.getElementById('contact-role').value = c.role || '';
+        document.querySelector('#modal-addContact h2').innerText = 'Edycja Osoby';
+    }
+    else if (type === 'event') {
+        const e = storage.events.find(x => x.id === id);
+        if(!e) return;
+        openModal('addEvent');
+        document.getElementById('event-title').value = e.title;
+        document.getElementById('event-date').value = e.date || '';
+        document.getElementById('event-time').value = e.time || '';
+        document.querySelector('#modal-addEvent h2').innerText = 'Edycja Wydarzenia';
+    }
+}
+
+// --- EXPORT/IMPORT ---
+function exportData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(storage, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "ams_backup_" + new Date().toISOString().split('T')[0] + ".json");
+    document.body.appendChild(downloadAnchorNode); 
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (imported && imported.areas !== undefined) {
+                storage = imported;
+                saveToStorage();
+                showToast('Dane zaimportowane pomyślnie! 🔄');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert('Nieprawidłowy plik danych!');
+            }
+        } catch (err) {
+            alert('Błąd podczas ładowania pliku!');
+        }
+    };
+    reader.readAsText(file);
 }
 
 // --- SELECT BOX HELPERS ---
