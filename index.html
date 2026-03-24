@@ -337,9 +337,13 @@
       <input type="text" id="proj-name" class="form-input" placeholder="np. WP2 – Content Development">
       <label>Opis</label>
       <textarea id="proj-desc" class="form-input" rows="3"></textarea>
+      
+      <label>Odpowiedzialni (Owners)</label>
+      <div id="proj-owners-container" class="multi-select-container"></div>
+      <label>Kto wykonuje? (Workers)</label>
+      <div id="proj-workers-container" class="multi-select-container"></div>
+
       <div class="form-row">
-        <div><label>Główny wykonawca (Owner)</label>
-        <select id="proj-assignee" class="form-input"><option value="">-- Brak --</option></select></div>
         <div><label>Termin (Deadline)</label>
         <input type="date" id="proj-deadline" class="form-input"></div>
       </div>
@@ -378,8 +382,10 @@
     <div class="modal-body">
       <label>Projekt *</label>
       <select id="task-project" class="form-input"><option value="">-- Wybierz projekt --</option></select>
-      <label>Przypisane do (Osoba/Zespół)</label>
-      <select id="task-assignee" class="form-input"><option value="">-- Brak przypisania --</option></select>
+      <label>Odpowiedzialni za nadzór (Owners)</label>
+      <div id="task-owners-container" class="multi-select-container"></div>
+      <label>Osoby wykonujące zadanie (Workers)</label>
+      <div id="task-workers-container" class="multi-select-container"></div>
       <label>Nazwa zadania *</label>
       <input type="text" id="task-name" class="form-input" placeholder="np. Przygotować raport WP2">
       <label>Opis / Notatki</label>

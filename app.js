@@ -174,14 +174,19 @@ function openModal(modalId) {
       }
   }
   
-  // Populate select boxes if needed
+  if (modalId === 'addArea') {
+      renderAssigneeCheckboxes('area-owners-container', 'area-owner-check', []);
+      renderAssigneeCheckboxes('area-workers-container', 'area-worker-check', []);
+  }
   if (modalId === 'addProject') {
       populateAreaSelect('proj-area');
-      populateAssigneeSelect('proj-assignee');
+      renderAssigneeCheckboxes('proj-owners-container', 'proj-owner-check', []);
+      renderAssigneeCheckboxes('proj-workers-container', 'proj-worker-check', []);
   }
   if (modalId === 'addTask') {
       populateProjectSelect('task-project');
-      populateAssigneeSelect('task-assignee');
+      renderAssigneeCheckboxes('task-owners-container', 'task-owner-check', []);
+      renderAssigneeCheckboxes('task-workers-container', 'task-worker-check', []);
   }
   if (modalId === 'addTeam') {
       populateTeamMembersCheckboxes();
@@ -415,9 +420,9 @@ function renderEvents() {
     // Generate events per day
     const getItemsForDate = (dateStr) => {
         let items = [];
-        storage.events.forEach(e => { if (e.date === dateStr) items.push({ type: 'event', title: e.title, d: e, icon: 'calendar-heart', class: 'cal-event', assignedId: null }); });
-        storage.tasks.forEach(t => { if (t.dueDate === dateStr) items.push({ type: 'task', title: `${t.name}`, d: t, icon: 'check-square', class: 'cal-task', assignedId: t.assignee }); });
-        storage.projects.forEach(p => { if (p.deadline === dateStr) items.push({ type: 'project', title: `${p.name}`, d: p, icon: 'folder', class: 'cal-project', assignedId: p.assignee }); });
+        storage.events.forEach(e => { if (e.date === dateStr) items.push({ type: 'event', title: e.title, d: e, icon: 'calendar-heart', class: 'cal-event', assignedIds: [] }); });
+        storage.tasks.forEach(t => { if (t.dueDate === dateStr) items.push({ type: 'task', title: `${t.name}`, d: t, icon: 'check-square', class: 'cal-task', assignedIds: [...(t.owners||[]), ...(t.workers||[]), ...(t.assignee?[t.assignee]:[])] }); });
+        storage.projects.forEach(p => { if (p.deadline === dateStr) items.push({ type: 'project', title: `${p.name}`, d: p, icon: 'folder', class: 'cal-project', assignedIds: [...(p.owners||[]), ...(p.workers||[]), ...(p.assignee?[p.assignee]:[])] }); });
         return items;
     };
     
@@ -438,18 +443,20 @@ function renderEvents() {
             const items = getItemsForDate(dateStr);
             
             let itemsHtml = items.map(it => {
-               let assigneeName = '';
-               if (it.assignedId) {
-                   if (it.assignedId.startsWith('contact_')) {
-                       const c = storage.contacts.find(x => x.id === it.assignedId.split('_')[1]);
-                       if (c) assigneeName = ` ${c.first}`;
-                   } else if (it.assignedId.startsWith('team_')) {
-                       const t = (storage.teams||[]).find(x => x.id === it.assignedId.split('_')[1]);
-                       if (t) assigneeName = ` ${t.name}`;
+               let assigneesHtml = '';
+               // Make array unique
+               const uniqueIds = [...new Set(it.assignedIds)];
+               uniqueIds.forEach(idStr => {
+                   if (idStr.startsWith('contact_')) {
+                       const c = storage.contacts.find(x => x.id === idStr.split('_')[1]);
+                       if (c) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${c.first}]</span>`;
+                   } else if (idStr.startsWith('team_')) {
+                       const t = (storage.teams||[]).find(x => x.id === idStr.split('_')[1]);
+                       if (t) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${t.name}]</span>`;
                    }
-               }
-               return `<div class="cal-event-badge ${it.class}" title="${it.title} ${assigneeName ? '('+assigneeName+')' : ''}">
-                 <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title} ${assigneeName ? '<span style="opacity:0.6; margin-left:2px;">['+assigneeName.trim()+']</span>' : ''}
+               });
+               return `<div class="cal-event-badge ${it.class}" title="${it.title}">
+                 <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title}${assigneesHtml}
                </div>`;
             }).join('');
             
@@ -508,7 +515,8 @@ function saveProject() {
           p.priority = document.getElementById('proj-priority').value;
           p.start = document.getElementById('proj-start').value;
           p.end = document.getElementById('proj-end').value;
-          p.assignee = document.getElementById('proj-assignee').value;
+          p.owners = Array.from(document.querySelectorAll('.proj-owner-check:checked')).map(c => c.value);
+          p.workers = Array.from(document.querySelectorAll('.proj-worker-check:checked')).map(c => c.value);
           p.deadline = document.getElementById('proj-deadline').value;
       }
       showToast('Projekt zaktualizowany! 📁');
@@ -522,7 +530,8 @@ function saveProject() {
         priority: document.getElementById('proj-priority').value,
         start: document.getElementById('proj-start').value,
         end: document.getElementById('proj-end').value,
-        assignee: document.getElementById('proj-assignee').value,
+        owners: Array.from(document.querySelectorAll('.proj-owner-check:checked')).map(c => c.value),
+        workers: Array.from(document.querySelectorAll('.proj-worker-check:checked')).map(c => c.value),
         deadline: document.getElementById('proj-deadline').value
       });
       showToast('Projekt został zapisany! 📁');
@@ -546,7 +555,8 @@ function saveTask() {
           t.status = document.getElementById('task-status').value;
           t.dueDate = document.getElementById('task-due').value;
           t.progress = document.getElementById('task-progress').value;
-          t.assignee = document.getElementById('task-assignee').value;
+          t.owners = Array.from(document.querySelectorAll('.task-owner-check:checked')).map(c => c.value);
+          t.workers = Array.from(document.querySelectorAll('.task-worker-check:checked')).map(c => c.value);
       }
       showToast('Zadanie zaktualizowane! ✅');
   } else {
@@ -558,7 +568,8 @@ function saveTask() {
         status: document.getElementById('task-status').value,
         dueDate: document.getElementById('task-due').value,
         progress: document.getElementById('task-progress').value,
-        assignee: document.getElementById('task-assignee').value
+        owners: Array.from(document.querySelectorAll('.task-owner-check:checked')).map(c => c.value),
+        workers: Array.from(document.querySelectorAll('.task-worker-check:checked')).map(c => c.value)
       });
       showToast('Zadanie zostało zapisane! ✅');
   }
@@ -689,6 +700,11 @@ function editItem(type, id) {
         document.getElementById('proj-start').value = p.start || '';
         document.getElementById('proj-end').value = p.end || '';
         document.querySelector('#modal-addProject h2').innerText = 'Edycja Projektu';
+        // Checkboxes check timeout
+        setTimeout(() => {
+            renderAssigneeCheckboxes('proj-owners-container', 'proj-owner-check', p.owners || (p.assignee ? [p.assignee] : []));
+            renderAssigneeCheckboxes('proj-workers-container', 'proj-worker-check', p.workers || []);
+        }, 10);
     }
     else if (type === 'task') {
         const t = storage.tasks.find(x => x.id === id);
@@ -701,6 +717,11 @@ function editItem(type, id) {
         document.getElementById('task-due').value = t.dueDate || '';
         document.getElementById('task-progress').value = t.progress || 0;
         document.querySelector('#modal-addTask h2').innerText = 'Edycja Zadania';
+        // Checkboxes check timeout
+        setTimeout(() => {
+            renderAssigneeCheckboxes('task-owners-container', 'task-owner-check', t.owners || (t.assignee ? [t.assignee] : []));
+            renderAssigneeCheckboxes('task-workers-container', 'task-worker-check', t.workers || []);
+        }, 10);
     }
     else if (type === 'log') {
         const l = storage.logs.find(x => x.id === id);
@@ -783,23 +804,30 @@ function importData(event) {
 }
 
 // --- SELECT BOX HELPERS ---
-function populateAssigneeSelect(id) {
-    const select = document.getElementById(id);
-    if (!select) return;
-    let html = '<option value="">-- Brak przypisania --</option>';
-    
-    if (storage.contacts.length > 0) {
-        html += '<optgroup label="Osoby">';
-        storage.contacts.forEach(c => html += `<option value="contact_${c.id}">👤 ${c.first} ${c.last}</option>`);
-        html += '</optgroup>';
-    }
-    const teams = storage.teams || [];
-    if (teams.length > 0) {
-        html += '<optgroup label="Zespoły">';
-        teams.forEach(t => html += `<option value="team_${t.id}">👥 ${t.name}</option>`);
-        html += '</optgroup>';
-    }
-    select.innerHTML = html;
+function renderAssigneeCheckboxes(containerId, inputClass, selectedArray = []) {
+   const container = document.getElementById(containerId);
+   if (!container) return;
+   let html = '';
+   
+   if (storage.contacts.length > 0) {
+       html += '<div style="font-size:11px;color:#a1a1aa;margin-top:4px;">OSOBY</div>';
+       storage.contacts.forEach(c => {
+           const val = `contact_${c.id}`;
+           const checked = selectedArray.includes(val) ? 'checked' : '';
+           html += `<label class="checkbox-row"><input type="checkbox" class="${inputClass}" value="${val}" ${checked}> <span>${c.first} ${c.last}</span></label>`;
+       });
+   }
+   const teams = storage.teams || [];
+   if (teams.length > 0) {
+       html += '<div style="font-size:11px;color:#a1a1aa;margin-top:8px;">ZESPOŁY</div>';
+       teams.forEach(t => {
+           const val = `team_${t.id}`;
+           const checked = selectedArray.includes(val) ? 'checked' : '';
+           html += `<label class="checkbox-row"><input type="checkbox" class="${inputClass}" value="${val}" ${checked}> <span>${t.name}</span></label>`;
+       });
+   }
+   if(!html) html = '<span style="font-size:12px;color:#666;">Brak kontaktów/zespołów</span>';
+   container.innerHTML = html;
 }
 
 function populateTeamMembersCheckboxes() {
@@ -918,8 +946,8 @@ function openDetail(type, id) {
       const prefix = isTeam ? 'team_' : 'contact_';
       const assignKey = prefix + id;
       
-      const assignedTasks = storage.tasks.filter(t => t.assignee === assignKey);
-      const assignedProjects = storage.projects.filter(p => p.assignee === assignKey);
+      const assignedTasks = storage.tasks.filter(t => (t.owners||[]).includes(assignKey) || (t.workers||[]).includes(assignKey) || t.assignee === assignKey);
+      const assignedProjects = storage.projects.filter(p => (p.owners||[]).includes(assignKey) || (p.workers||[]).includes(assignKey) || p.assignee === assignKey);
       
       html += `<h2 style="font-size:24px; font-weight:700; margin-bottom:5px; padding-right:30px;">${isTeam ? '<i data-lucide="users" style="color:var(--primary)"></i> ' : '<i data-lucide="user" style="color:var(--accent-light)"></i> '}${title}</h2>`;
       html += `<p style="color:#a1a1aa; margin-bottom: 25px;">${subtitle}</p>`;
