@@ -394,6 +394,7 @@ function renderEvents() {
 function saveArea() {
   const modal = document.getElementById('modal-addArea');
   const name = document.getElementById('area-name').value;
+  const color = document.getElementById('area-color').value || '#6366f1';
   if (!name) return alert('Nazwa jest wymagana');
   
   if (editingId && editingType === 'area') {
@@ -401,6 +402,7 @@ function saveArea() {
       if (a) {
           a.name = name;
           a.desc = document.getElementById('area-desc').value;
+          a.color = color;
       }
       showToast('Obszar został zaktualizowany! ✅');
   } else {
@@ -408,7 +410,7 @@ function saveArea() {
         id: generateId(),
         name,
         desc: document.getElementById('area-desc').value,
-        color: '#6366f1' // simple default color 
+        color
       });
       showToast('Obszar został zapisany! ✅');
   }
@@ -591,6 +593,7 @@ function editItem(type, id) {
         openModal('addArea');
         document.getElementById('area-name').value = a.name;
         document.getElementById('area-desc').value = a.desc || '';
+        document.getElementById('area-color').value = a.color || '#6366f1';
         document.querySelector('#modal-addArea h2').innerText = 'Edycja Obszaru';
     }
     else if (type === 'project') {
