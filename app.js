@@ -17,29 +17,34 @@ let editingId = null;
 let editingType = null;
 
 async function loadFromStorage() {
-  const saved = localStorage.getItem('ams_data');
-  if (saved) {
-    storage = JSON.parse(saved);
-  } else {
-    seedInitialData();
-  }
-  updateUI();
-
-  // Try fetching from the cloud
+  const defaults = { areas: [], projects: [], tasks: [], logs: [], contacts: [], events: [] };
+  
+  // Najpierw pobieramy z chmury, która jest nadrzędnym zbiorem prawdy
   try {
       const res = await fetch('/api/sync');
       if (res.ok) {
           const cloudData = await res.json();
-          // If cloud has data, it's the source of truth
           if (cloudData && typeof cloudData === 'object' && Object.keys(cloudData).length > 0) {
-              storage = cloudData;
+              storage = { ...defaults, ...cloudData };
               localStorage.setItem('ams_data', JSON.stringify(storage));
               updateUI();
+              return; // Mamy dane z chmury, nie musimy polegać na wbudowanej pamięci
           }
       }
   } catch(e) {
-      console.log('Working offline / No DB configured');
+      console.log('Working offline / Cloud sync failed');
   }
+
+  // W przypadku gdy serwer z chmury był pusty / błąd - powrót do LocalStorage
+  const saved = localStorage.getItem('ams_data');
+  if (saved) {
+    storage = { ...defaults, ...JSON.parse(saved) };
+  } else {
+    // Gdy wszystko jest puste (nowe uruchomienie offline), przygotuj bazę
+    storage = { ...defaults };
+    localStorage.setItem('ams_data', JSON.stringify(storage));
+  }
+  updateUI();
 }
 
 async function saveToStorage() {
@@ -75,9 +80,8 @@ function clearInputs(parent) {
 }
 
 function seedInitialData() {
-  storage.areas = [];
-  storage.projects = [];
-  saveToStorage();
+  // Usunięto tę funkcję, ponieważ przez wywoływanie saveToStorage() na czystych 
+  // instancjach i nadpisywało dane na serwerze!
 }
 
 // --- UTILS ---
