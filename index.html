@@ -8,46 +8,47 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=2">
+<script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <span class="logo-icon">⚡</span>
+      <span class="logo-icon"><i data-lucide="zap"></i></span>
       <span class="logo-text">AMS</span>
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
-        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+        <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span>
       </a>
       <a href="#" class="nav-item" data-view="areas" onclick="showView('areas')">
-        <span class="nav-icon">🗂</span><span class="nav-label">Obszary</span>
+        <span class="nav-icon"><i data-lucide="layers"></i></span><span class="nav-label">Obszary</span>
       </a>
       <a href="#" class="nav-item" data-view="projects" onclick="showView('projects')">
-        <span class="nav-icon">📁</span><span class="nav-label">Projekty</span>
+        <span class="nav-icon"><i data-lucide="folder"></i></span><span class="nav-label">Projekty</span>
       </a>
       <a href="#" class="nav-item" data-view="tasks" onclick="showView('tasks')">
-        <span class="nav-icon">✅</span><span class="nav-label">Zadania</span>
+        <span class="nav-icon"><i data-lucide="check-square"></i></span><span class="nav-label">Zadania</span>
       </a>
       <a href="#" class="nav-item" data-view="log" onclick="showView('log')">
-        <span class="nav-icon">📋</span><span class="nav-label">Log działań</span>
+        <span class="nav-icon"><i data-lucide="clipboard-list"></i></span><span class="nav-label">Log działań</span>
       </a>
       <a href="#" class="nav-item" data-view="contacts" onclick="showView('contacts')">
-        <span class="nav-icon">👥</span><span class="nav-label">Osoby</span>
+        <span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Osoby</span>
       </a>
       <a href="#" class="nav-item" data-view="calendar" onclick="showView('calendar')">
-        <span class="nav-icon">📅</span><span class="nav-label">Terminy</span>
+        <span class="nav-icon"><i data-lucide="calendar"></i></span><span class="nav-label">Terminy</span>
       </a>
       <a href="#" class="nav-item" data-view="reports" onclick="showView('reports')">
-        <span class="nav-icon">📊</span><span class="nav-label">Raporty</span>
+        <span class="nav-icon"><i data-lucide="pie-chart"></i></span><span class="nav-label">Raporty</span>
       </a>
     </nav>
     <div class="sidebar-bottom">
-      <button class="btn-quick btn-quick-task" onclick="openModal('addTask')">+ Zadanie</button>
-      <button class="btn-quick btn-quick-log" onclick="openModal('addLog')">+ Log</button>
+      <button class="btn-quick btn-quick-task" onclick="openModal('addTask')"><i data-lucide="plus"></i> Zadanie</button>
+      <button class="btn-quick btn-quick-log" onclick="openModal('addLog')"><i data-lucide="plus"></i> Log</button>
       <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
-        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px;" onclick="exportData()">💾 Eksport danych</button>
-        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px;" onclick="document.getElementById('import-file').click()">📂 Import danych</button>
+        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="exportData()"><i data-lucide="download"></i> Eksport danych</button>
+        <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="document.getElementById('import-file').click()"><i data-lucide="upload"></i> Import danych</button>
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
       </div>
     </div>
@@ -61,7 +62,7 @@
     <!-- MOBILE HEADER -->
     <div class="mobile-header">
       <div class="mobile-logo">
-        <span class="logo-icon">⚡</span>
+        <span class="logo-icon"><i data-lucide="zap"></i></span>
         <span class="logo-text">AMS</span>
       </div>
       <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -83,30 +84,30 @@
       <!-- KPIs -->
       <div class="kpi-grid">
         <div class="kpi-card kpi-overdue" onclick="showView('tasks','overdue')">
-          <div class="kpi-icon">🔴</div>
+          <div class="kpi-icon" style="color: var(--danger);"><i data-lucide="alert-circle"></i></div>
           <div class="kpi-info">
-            <div class="kpi-num" id="kpi-overdue">0</div>
+            <div class="kpi-val" id="kpi-overdue">0</div>
             <div class="kpi-label">Po terminie</div>
           </div>
         </div>
         <div class="kpi-card kpi-week" onclick="showView('tasks','week')">
-          <div class="kpi-icon">📅</div>
+          <div class="kpi-icon" style="color: var(--warning);"><i data-lucide="calendar-clock"></i></div>
           <div class="kpi-info">
-            <div class="kpi-num" id="kpi-week">0</div>
+            <div class="kpi-val" id="kpi-week">0</div>
             <div class="kpi-label">Na 7 dni</div>
           </div>
         </div>
         <div class="kpi-card kpi-waiting" onclick="showView('tasks','waiting')">
-          <div class="kpi-icon">⏳</div>
+          <div class="kpi-icon" style="color: #a855f7;"><i data-lucide="hourglass"></i></div>
           <div class="kpi-info">
-            <div class="kpi-num" id="kpi-waiting">0</div>
+            <div class="kpi-val" id="kpi-waiting">0</div>
             <div class="kpi-label">Czekam na kogoś</div>
           </div>
         </div>
         <div class="kpi-card kpi-active" onclick="showView('projects')">
-          <div class="kpi-icon">🚀</div>
+          <div class="kpi-icon" style="color: var(--success);"><i data-lucide="rocket"></i></div>
           <div class="kpi-info">
-            <div class="kpi-num" id="kpi-active">0</div>
+            <div class="kpi-val" id="kpi-active">0</div>
             <div class="kpi-label">Aktywne projekty</div>
           </div>
         </div>
@@ -117,33 +118,33 @@
         <!-- Left -->
         <div class="dash-col">
           <div class="dash-widget">
-            <div class="widget-header"><span>🔴 Po terminie</span></div>
+            <div class="widget-header"><span><i data-lucide="alert-circle" style="color:var(--danger)"></i> Po terminie</span></div>
             <div class="widget-body" id="widget-overdue-tasks"></div>
           </div>
           <div class="dash-widget">
-            <div class="widget-header"><span>📅 Na najbliższe 7 dni</span></div>
+            <div class="widget-header"><span><i data-lucide="calendar-clock" style="color:var(--warning)"></i> Na najbliższe 7 dni</span></div>
             <div class="widget-body" id="widget-week-tasks"></div>
           </div>
         </div>
         <!-- Center -->
         <div class="dash-col">
           <div class="dash-widget">
-            <div class="widget-header"><span>⏳ Czekam na kogoś</span></div>
+            <div class="widget-header"><span><i data-lucide="hourglass" style="color:#a855f7"></i> Czekam na kogoś</span></div>
             <div class="widget-body" id="widget-waiting-tasks"></div>
           </div>
           <div class="dash-widget">
-            <div class="widget-header"><span>🚀 Aktywne projekty</span><a href="#" onclick="showView('projects')" class="widget-link">Wszystkie</a></div>
+            <div class="widget-header"><span><i data-lucide="rocket" style="color:var(--success)"></i> Aktywne projekty</span><a href="#" onclick="showView('projects')" class="widget-link">Wszystkie</a></div>
             <div class="widget-body" id="widget-active-projects"></div>
           </div>
         </div>
         <!-- Right -->
         <div class="dash-col">
           <div class="dash-widget">
-            <div class="widget-header"><span>📋 Ostatnie działania</span><a href="#" onclick="showView('log')" class="widget-link">Wszystkie</a></div>
+            <div class="widget-header"><span><i data-lucide="file-clock"></i> Ostatnie działania</span><a href="#" onclick="showView('log')" class="widget-link">Wszystkie</a></div>
             <div class="widget-body" id="widget-recent-log"></div>
           </div>
           <div class="dash-widget">
-            <div class="widget-header"><span>📅 Najbliższe terminy</span></div>
+            <div class="widget-header"><span><i data-lucide="calendar-heart"></i> Najbliższe terminy</span></div>
             <div class="widget-body" id="widget-events"></div>
           </div>
         </div>

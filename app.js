@@ -214,6 +214,7 @@ function renderDashboard() {
   renderList('widget-active-projects', activeProjects.slice(0, 5), 'project');
   renderList('widget-recent-log', storage.logs.slice(-5).reverse(), 'log');
   renderList('widget-events', storage.events.slice(0, 5), 'event');
+  lucide.createIcons();
 }
 
 function renderList(containerId, items, type) {
@@ -262,12 +263,13 @@ function renderAreas() {
     <div class="area-card" style="--area-color: ${a.color}">
       <div class="area-name">${a.name}</div>
       <div class="area-desc">${a.desc || ''}</div>
-      <div class="action-btns" style="margin-top:10px; display:flex; gap:8px;">
-        <button onclick="event.stopPropagation(); editItem('area', '${a.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; font-size:14px; text-decoration:underline;">Edytuj</button>
-        <button onclick="event.stopPropagation(); deleteItem('area', '${a.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; font-size:14px; text-decoration:underline;">Usuń</button>
+      <div class="action-btns" style="margin-top:10px; display:flex; justify-content:flex-end;">
+        <button class="action-btn edit" onclick="event.stopPropagation(); editItem('area', '${a.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+        <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('area', '${a.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
   `).join('');
+  lucide.createIcons();
 }
 
 function renderProjects() {
@@ -291,13 +293,14 @@ function renderProjects() {
       </div>
       <div class="task-card-right" style="text-align:right;">
         <span class="badge ${getStatusClass(p.status)}">${p.status}</span>
-        <div style="margin-top:6px; font-size:13px;">
-          <button onclick="event.stopPropagation(); editItem('project', '${p.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
-          <button onclick="event.stopPropagation(); deleteItem('project', '${p.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+        <div class="action-btns" style="margin-top:8px;">
+          <button class="action-btn edit" onclick="event.stopPropagation(); editItem('project', '${p.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+          <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('project', '${p.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
     </div>
   `).join('');
+  lucide.createIcons();
 }
 
 function renderTasks(filter = null) {
@@ -317,48 +320,51 @@ function renderTasks(filter = null) {
       </div>
       <div class="task-card-right" style="text-align:right;">
         <span class="badge ${getStatusClass(t.status)}">${t.status}</span>
-        <span class="task-due" style="display:block; margin-top:2px;">${formatDate(t.dueDate)}</span>
-        <div style="margin-top:6px; font-size:13px;">
-          <button onclick="event.stopPropagation(); editItem('task', '${t.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
-          <button onclick="event.stopPropagation(); deleteItem('task', '${t.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+        <span class="task-due" style="display:block; margin-top:2px;"><i data-lucide="calendar"></i> ${formatDate(t.dueDate)}</span>
+        <div class="action-btns" style="margin-top:8px;">
+          <button class="action-btn edit" onclick="event.stopPropagation(); editItem('task', '${t.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+          <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('task', '${t.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
         </div>
       </div>
     </div>
   `).join('');
+  lucide.createIcons();
 }
 
 function renderLog() {
     const list = document.getElementById('log-timeline');
     list.innerHTML = storage.logs.map(l => `
         <div class="timeline-item">
-            <div class="timeline-icon">📋</div>
+            <div class="timeline-icon"><i data-lucide="clipboard-list"></i></div>
             <div class="timeline-content">
                 <div class="timeline-meta">
                     <span class="timeline-date">${formatDate(l.date)}</span>
                 </div>
                 <div class="timeline-desc">${l.desc}</div>
-                <div style="margin-top:6px; font-size:13px;">
-                  <button onclick="event.stopPropagation(); editItem('log', '${l.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
-                  <button onclick="event.stopPropagation(); deleteItem('log', '${l.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+                <div class="action-btns" style="margin-top:8px; justify-content:flex-start;">
+                  <button class="action-btn edit" onclick="event.stopPropagation(); editItem('log', '${l.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+                  <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('log', '${l.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>
         </div>
     `).join('');
+    lucide.createIcons();
 }
 
 function renderContacts() {
     const list = document.getElementById('contacts-list');
     list.innerHTML = storage.contacts.map(c => `
         <div class="contact-card">
-            <div class="contact-name">${c.first} ${c.last}</div>
-            <div class="contact-org">${c.org || ''}</div>
-            <div class="contact-role">${c.role || ''}</div>
-            <div style="margin-top:10px; font-size:13px; border-top: 1px solid #eee; padding-top:8px;">
-              <button onclick="event.stopPropagation(); editItem('contact', '${c.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
-              <button onclick="event.stopPropagation(); deleteItem('contact', '${c.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+            <div class="contact-name"><i data-lucide="user" style="width:18px;height:18px;color:var(--accent-light);"></i> ${c.first} ${c.last}</div>
+            <div class="contact-org"><i data-lucide="building" style="width:14px;height:14px;"></i> ${c.org || 'Brak organizacji'}</div>
+            <div class="contact-role"><i data-lucide="briefcase" style="width:14px;height:14px;"></i> ${c.role || 'Brak roli'}</div>
+            <div class="action-btns" style="margin-top:12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top:12px; justify-content:flex-end;">
+              <button class="action-btn edit" onclick="event.stopPropagation(); editItem('contact', '${c.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+              <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('contact', '${c.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
             </div>
         </div>
     `).join('');
+    lucide.createIcons();
 }
 
 function renderEvents() {
@@ -369,14 +375,15 @@ function renderEvents() {
                 <div class="task-card-name">${e.title}</div>
             </div>
             <div class="task-card-right" style="text-align:right;">
-                <span class="task-due">${formatDate(e.date)} ${e.time || ''}</span>
-                <div style="margin-top:6px; font-size:13px;">
-                  <button onclick="event.stopPropagation(); editItem('event', '${e.id}')" style="background:none; border:none; cursor:pointer; color:#4f46e5; text-decoration:underline; margin-right:6px;">Edytuj</button>
-                  <button onclick="event.stopPropagation(); deleteItem('event', '${e.id}')" style="background:none; border:none; cursor:pointer; color:#ef4444; text-decoration:underline;">Usuń</button>
+                <span class="task-due"><i data-lucide="clock"></i> ${formatDate(e.date)} ${e.time || ''}</span>
+                <div class="action-btns" style="margin-top:8px;">
+                  <button class="action-btn edit" onclick="event.stopPropagation(); editItem('event', '${e.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+                  <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('event', '${e.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
                 </div>
             </div>
         </div>
     `).join('');
+    lucide.createIcons();
 }
 
 // --- SAVE ACTIONS ---
