@@ -1293,3 +1293,55 @@ function addTaskStep() {
     div.innerHTML = `<input type="checkbox" class="step-checkbox"> <input type="text" class="form-input" placeholder="Nazwa etapu...">`;
     list.appendChild(div);
 }
+
+// --- SPEECH TO TEXT (DARMOWE) ---
+function startDictation(inputId, btnId) {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        showToast('Twoja przeglądarka nie obsługuje dyktowania głosowego. Użyj Chrome lub Edge.');
+        return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = 'pl-PL';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const btn = document.getElementById(btnId);
+    const inputEl = document.getElementById(inputId);
+    const originalHtml = btn.innerHTML;
+
+    recognition.onstart = function() {
+        btn.innerHTML = '<i data-lucide="mic" style="width:12px; height:12px; color: var(--danger);"></i> Słucham...';
+        btn.style.borderColor = 'var(--danger)';
+        if (window.lucide) lucide.createIcons();
+    };
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        if (inputEl.value) {
+            inputEl.value += ' ' + transcript;
+        } else {
+            // uppercase first letter
+            inputEl.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+        }
+    };
+
+    recognition.onerror = function(event) {
+        console.error('Błąd dyktowania:', event.error);
+        if (event.error === 'not-allowed') {
+            showToast('Musisz zezwolić przeglądarce na dostęp do mikrofonu.');
+        } else {
+            showToast('Przerwano nasłuchiwanie.');
+        }
+    };
+
+    recognition.onend = function() {
+        btn.innerHTML = originalHtml;
+        btn.style.borderColor = 'rgba(255,255,255,0.3)';
+        if (window.lucide) lucide.createIcons();
+    };
+
+    recognition.start();
+}

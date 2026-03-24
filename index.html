@@ -450,8 +450,13 @@
           <input type="date" id="log-date" class="form-input">
         </div>
       </div>
-      <label>Opis *</label>
-      <textarea id="log-desc" class="form-input" rows="4" placeholder="np. Mail do partnera w sprawie harmonogramu WP2..."></textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <label style="margin-bottom: 0;">Opis *</label>
+        <button id="btn-dictate-log" type="button" class="btn-quick" style="border:1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color:#ccc; font-size:11px; padding: 4px 8px; border-radius: 4px; display:flex; gap:4px; align-items:center; cursor:pointer;" onclick="startDictation('log-desc', 'btn-dictate-log')">
+          <i data-lucide="mic" style="width:12px; height:12px;"></i> Dyktuj
+        </button>
+      </div>
+      <textarea id="log-desc" class="form-input" rows="4" placeholder="np. Mail do partnera w sprawie harmonogramu WP2..." style="margin-top: 0;"></textarea>
       <label>Powiąż (Opcjonalnie)</label>
       <select id="log-relation" class="form-input"></select>
     </div>
