@@ -17,7 +17,7 @@ let editingId = null;
 let editingType = null;
 
 async function loadFromStorage() {
-  const defaults = { areas: [], projects: [], tasks: [], logs: [], contacts: [], events: [] };
+  const defaults = { areas: [], projects: [], tasks: [], logs: [], contacts: [], events: [], teams: [] };
   
   // Najpierw pobieramy z chmury, która jest nadrzędnym zbiorem prawdy
   try {
@@ -175,10 +175,16 @@ function openModal(modalId) {
   }
   
   // Populate select boxes if needed
-  if (modalId === 'addProject') populateAreaSelect('proj-area');
+  if (modalId === 'addProject') {
+      populateAreaSelect('proj-area');
+      populateAssigneeSelect('proj-assignee');
+  }
   if (modalId === 'addTask') {
-    populateProjectSelect('task-project');
-    populateContactSelect('task-contact');
+      populateProjectSelect('task-project');
+      populateAssigneeSelect('task-assignee');
+  }
+  if (modalId === 'addTeam') {
+      populateTeamMembersCheckboxes();
   }
 }
 
@@ -357,36 +363,104 @@ function renderLog() {
 
 function renderContacts() {
     const list = document.getElementById('contacts-list');
-    list.innerHTML = storage.contacts.map(c => `
-        <div class="contact-card">
-            <div class="contact-name"><i data-lucide="user" style="width:18px;height:18px;color:var(--accent-light);"></i> ${c.first} ${c.last}</div>
-            <div class="contact-org"><i data-lucide="building" style="width:14px;height:14px;"></i> ${c.org || 'Brak organizacji'}</div>
-            <div class="contact-role"><i data-lucide="briefcase" style="width:14px;height:14px;"></i> ${c.role || 'Brak roli'}</div>
-            <div class="action-btns" style="margin-top:12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top:12px; justify-content:flex-end;">
-              <button class="action-btn edit" onclick="event.stopPropagation(); editItem('contact', '${c.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
-              <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('contact', '${c.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
+    if (list) {
+        list.innerHTML = storage.contacts.map(c => `
+            <div class="contact-card" onclick="openDetail('contact', '${c.id}')" style="cursor:pointer;">
+                <div class="contact-name"><i data-lucide="user" style="width:18px;height:18px;color:var(--accent-light);"></i> ${c.first} ${c.last}</div>
+                <div class="contact-org"><i data-lucide="building" style="width:14px;height:14px;"></i> ${c.org || 'Brak organizacji'}</div>
+                <div class="contact-role"><i data-lucide="briefcase" style="width:14px;height:14px;"></i> ${c.role || 'Brak roli'}</div>
+                <div class="action-btns" style="margin-top:12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top:12px; justify-content:flex-end;">
+                  <button class="action-btn edit" onclick="event.stopPropagation(); editItem('contact', '${c.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+                  <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('contact', '${c.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    }
+    
+    // Render Teams
+    const teamsList = document.getElementById('teams-list');
+    if (teamsList) {
+        teamsList.innerHTML = (storage.teams || []).map(t => `
+            <div class="contact-card" onclick="openDetail('team', '${t.id}')" style="cursor:pointer; background:rgba(99,102,241,0.05);">
+                <div class="contact-name"><i data-lucide="users" style="width:18px;height:18px;color:var(--primary);"></i> ${t.name}</div>
+                <div class="contact-org" style="margin-top:6px; font-size:13px; color:var(--text-muted);">${t.desc || ''}</div>
+                <div class="contact-role" style="color:var(--text-muted); font-size:12px; margin-top:4px;">Członkowie: ${t.members ? t.members.length : 0}</div>
+                <div class="action-btns" style="margin-top:12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top:12px; justify-content:flex-end;">
+                  <button class="action-btn edit" onclick="event.stopPropagation(); editItem('team', '${t.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
+                  <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('team', '${t.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
     lucide.createIcons();
 }
 
+let currentCalendarDate = new Date();
+
+function changeMonth(offset) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+    renderEvents();
+}
+
 function renderEvents() {
-    const list = document.getElementById('events-list');
-    list.innerHTML = storage.events.map(e => `
-        <div class="task-card">
-            <div class="task-card-left">
-                <div class="task-card-name">${e.title}</div>
-            </div>
-            <div class="task-card-right" style="text-align:right;">
-                <span class="task-due"><i data-lucide="clock"></i> ${formatDate(e.date)} ${e.time || ''}</span>
-                <div class="action-btns" style="margin-top:8px;">
-                  <button class="action-btn edit" onclick="event.stopPropagation(); editItem('event', '${e.id}')" title="Edytuj"><i data-lucide="edit-2"></i></button>
-                  <button class="action-btn delete" onclick="event.stopPropagation(); deleteItem('event', '${e.id}')" title="Usuń"><i data-lucide="trash-2"></i></button>
-                </div>
-            </div>
-        </div>
-    `).join('');
+    const grid = document.getElementById('monthly-calendar-grid');
+    const label = document.getElementById('calendar-month-label');
+    if (!grid || !label) return;
+
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    
+    label.innerText = currentCalendarDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' }).toUpperCase();
+    
+    // Generate events per day
+    const getItemsForDate = (dateStr) => {
+        let items = [];
+        storage.events.forEach(e => { if (e.date === dateStr) items.push({ type: 'event', title: e.title, d: e, icon: 'calendar-heart', class: 'cal-event', assignedId: null }); });
+        storage.tasks.forEach(t => { if (t.dueDate === dateStr) items.push({ type: 'task', title: `${t.name}`, d: t, icon: 'check-square', class: 'cal-task', assignedId: t.assignee }); });
+        storage.projects.forEach(p => { if (p.deadline === dateStr) items.push({ type: 'project', title: `${p.name}`, d: p, icon: 'folder', class: 'cal-project', assignedId: p.assignee }); });
+        return items;
+    };
+    
+    let html = '';
+    const daysOfWeek = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'N'];
+    daysOfWeek.forEach(d => html += `<div class="calendar-day-header">${d}</div>`);
+    
+    const firstDayIndex = (new Date(year, month, 1).getDay() || 7) - 1; 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    let dayCount = 1;
+    for (let i = 0; i < 42; i++) {
+        if (i < firstDayIndex || dayCount > daysInMonth) {
+            html += `<div class="calendar-cell other-month"></div>`;
+        } else {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}`;
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const items = getItemsForDate(dateStr);
+            
+            let itemsHtml = items.map(it => {
+               let assigneeName = '';
+               if (it.assignedId) {
+                   if (it.assignedId.startsWith('contact_')) {
+                       const c = storage.contacts.find(x => x.id === it.assignedId.split('_')[1]);
+                       if (c) assigneeName = ` ${c.first}`;
+                   } else if (it.assignedId.startsWith('team_')) {
+                       const t = (storage.teams||[]).find(x => x.id === it.assignedId.split('_')[1]);
+                       if (t) assigneeName = ` ${t.name}`;
+                   }
+               }
+               return `<div class="cal-event-badge ${it.class}" title="${it.title} ${assigneeName ? '('+assigneeName+')' : ''}">
+                 <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title} ${assigneeName ? '<span style="opacity:0.6; margin-left:2px;">['+assigneeName.trim()+']</span>' : ''}
+               </div>`;
+            }).join('');
+            
+            html += `<div class="calendar-cell ${isToday ? 'today' : ''}">
+                <div class="calendar-date-label">${dayCount}</div>
+                ${itemsHtml}
+            </div>`;
+            dayCount++;
+        }
+    }
+    grid.innerHTML = html;
     lucide.createIcons();
 }
 
@@ -434,6 +508,8 @@ function saveProject() {
           p.priority = document.getElementById('proj-priority').value;
           p.start = document.getElementById('proj-start').value;
           p.end = document.getElementById('proj-end').value;
+          p.assignee = document.getElementById('proj-assignee').value;
+          p.deadline = document.getElementById('proj-deadline').value;
       }
       showToast('Projekt zaktualizowany! 📁');
   } else {
@@ -445,7 +521,9 @@ function saveProject() {
         status: document.getElementById('proj-status').value,
         priority: document.getElementById('proj-priority').value,
         start: document.getElementById('proj-start').value,
-        end: document.getElementById('proj-end').value
+        end: document.getElementById('proj-end').value,
+        assignee: document.getElementById('proj-assignee').value,
+        deadline: document.getElementById('proj-deadline').value
       });
       showToast('Projekt został zapisany! 📁');
   }
@@ -468,6 +546,7 @@ function saveTask() {
           t.status = document.getElementById('task-status').value;
           t.dueDate = document.getElementById('task-due').value;
           t.progress = document.getElementById('task-progress').value;
+          t.assignee = document.getElementById('task-assignee').value;
       }
       showToast('Zadanie zaktualizowane! ✅');
   } else {
@@ -478,7 +557,8 @@ function saveTask() {
         desc: document.getElementById('task-desc').value,
         status: document.getElementById('task-status').value,
         dueDate: document.getElementById('task-due').value,
-        progress: document.getElementById('task-progress').value
+        progress: document.getElementById('task-progress').value,
+        assignee: document.getElementById('task-assignee').value
       });
       showToast('Zadanie zostało zapisane! ✅');
   }
@@ -578,6 +658,7 @@ function deleteItem(type, id) {
     if (type === 'task') storage.tasks = storage.tasks.filter(t => t.id !== id);
     if (type === 'log') storage.logs = storage.logs.filter(l => l.id !== id);
     if (type === 'contact') storage.contacts = storage.contacts.filter(c => c.id !== id);
+    if (type === 'team') storage.teams = storage.teams.filter(t => t.id !== id);
     if (type === 'event') storage.events = storage.events.filter(e => e.id !== id);
     saveToStorage();
     showToast('Element usunięty!');
@@ -640,6 +721,23 @@ function editItem(type, id) {
         document.getElementById('contact-role').value = c.role || '';
         document.querySelector('#modal-addContact h2').innerText = 'Edycja Osoby';
     }
+    else if (type === 'team') {
+        const t = storage.teams.find(x => x.id === id);
+        if(!t) return;
+        openModal('addTeam');
+        document.getElementById('team-name').value = t.name;
+        document.getElementById('team-desc').value = t.desc || '';
+        document.querySelector('#modal-addTeam h2').innerText = 'Edycja Zespołu';
+        
+        // Czekamy na przetworzenie modalu i renderowanie checkboxów by móc je zainicjować
+        setTimeout(() => {
+            Array.from(document.querySelectorAll('.team-member-check')).forEach(chk => {
+                if (t.members && t.members.includes(chk.value)) {
+                    chk.checked = true;
+                }
+            });
+        }, 10);
+    }
     else if (type === 'event') {
         const e = storage.events.find(x => x.id === id);
         if(!e) return;
@@ -685,6 +783,68 @@ function importData(event) {
 }
 
 // --- SELECT BOX HELPERS ---
+function populateAssigneeSelect(id) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    let html = '<option value="">-- Brak przypisania --</option>';
+    
+    if (storage.contacts.length > 0) {
+        html += '<optgroup label="Osoby">';
+        storage.contacts.forEach(c => html += `<option value="contact_${c.id}">👤 ${c.first} ${c.last}</option>`);
+        html += '</optgroup>';
+    }
+    const teams = storage.teams || [];
+    if (teams.length > 0) {
+        html += '<optgroup label="Zespoły">';
+        teams.forEach(t => html += `<option value="team_${t.id}">👥 ${t.name}</option>`);
+        html += '</optgroup>';
+    }
+    select.innerHTML = html;
+}
+
+function populateTeamMembersCheckboxes() {
+    const container = document.getElementById('team-members-container');
+    if (!container) return;
+    if (storage.contacts.length === 0) {
+        container.innerHTML = '<span style="color:#aaa;font-size:12px;">Brak osób w bazie. Najpierw dodaj osobę.</span>';
+        return;
+    }
+    container.innerHTML = storage.contacts.map(c => `
+      <label class="checkbox-row" style="cursor:pointer; padding: 4px; border-radius: 4px;">
+        <input type="checkbox" class="team-member-check" value="${c.id}" style="accent-color: var(--primary);">
+        <span>${c.first} ${c.last}</span>
+      </label>
+    `).join('');
+}
+
+function saveTeam() {
+    const name = document.getElementById('team-name').value;
+    if (!name) return alert('Nazwa zespołu jest wymagana');
+    
+    const checkboxes = document.querySelectorAll('.team-member-check:checked');
+    const members = Array.from(checkboxes).map(c => c.value);
+    
+    if (editingId && editingType === 'team') {
+        const t = storage.teams.find(x => x.id === editingId);
+        if (t) {
+            t.name = name;
+            t.desc = document.getElementById('team-desc').value;
+            t.members = members;
+        }
+        showToast('Zespół zaktualizowany! 🤝');
+    } else {
+        storage.teams = storage.teams || [];
+        storage.teams.push({
+            id: generateId(),
+            name,
+            desc: document.getElementById('team-desc').value,
+            members
+        });
+        showToast('Zespół zapisany do bazy! 🤝');
+    }
+    saveToStorage();
+    closeAllModals();
+}
 function populateAreaSelect(id) {
   const select = document.getElementById(id);
   select.innerHTML = storage.areas.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
@@ -733,8 +893,81 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function closeDetailPanel() {
-    document.getElementById('detail-panel').classList.remove('open');
-    document.getElementById('detail-overlay').classList.remove('open');
+    const p = document.getElementById('detail-panel');
+    const o = document.getElementById('detail-overlay');
+    if(p) p.classList.remove('open');
+    if(o) o.classList.remove('open');
+}
+
+function openDetail(type, id) {
+  const panel = document.getElementById('detail-panel');
+  const inner = document.getElementById('detail-panel-inner');
+  const overlay = document.getElementById('detail-overlay');
+  
+  if (!panel || !inner) return;
+  
+  let html = '<button class="close-btn" onclick="closeDetailPanel()" style="position:absolute; top:20px; right:20px; font-size:24px; cursor:pointer; background:none; border:none; color:#a1a1aa; transition:0.2s;">×</button>';
+  
+  if (type === 'contact' || type === 'team') {
+      const isTeam = type === 'team';
+      const entity = isTeam ? (storage.teams||[]).find(x => x.id === id) : storage.contacts.find(x => x.id === id);
+      if (!entity) return;
+      
+      const title = isTeam ? entity.name : `${entity.first} ${entity.last}`;
+      const subtitle = isTeam ? (entity.desc||'') : ((entity.role||'') + ' ' + (entity.org||''));
+      const prefix = isTeam ? 'team_' : 'contact_';
+      const assignKey = prefix + id;
+      
+      const assignedTasks = storage.tasks.filter(t => t.assignee === assignKey);
+      const assignedProjects = storage.projects.filter(p => p.assignee === assignKey);
+      
+      html += `<h2 style="font-size:24px; font-weight:700; margin-bottom:5px; padding-right:30px;">${isTeam ? '<i data-lucide="users" style="color:var(--primary)"></i> ' : '<i data-lucide="user" style="color:var(--accent-light)"></i> '}${title}</h2>`;
+      html += `<p style="color:#a1a1aa; margin-bottom: 25px;">${subtitle}</p>`;
+      
+      if (isTeam && entity.members && entity.members.length > 0) {
+          html += `<h3 style="font-size:15px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:#c7d2fe;">Skład zespołu</h3>`;
+          html += `<div style="margin-bottom: 25px; display:flex; flex-direction:column; gap:6px;">`;
+          entity.members.forEach(mId => {
+              const c = storage.contacts.find(x => x.id === mId);
+              if (c) html += `<div style="background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:6px; font-size:14px; display:flex; align-items:center; gap:8px;"><i data-lucide="user" style="width:14px; height:14px; opacity:0.6;"></i> ${c.first} ${c.last}</div>`;
+          });
+          html += `</div>`;
+      }
+      
+      html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--success);">📁 Przypisane Projekty (${assignedProjects.length})</h3>`;
+      html += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
+      assignedProjects.forEach(p => {
+          html += `<div class="card-sm" style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); padding:12px; border-radius:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onclick="showView('projects'); closeDetailPanel();">
+            <span style="font-weight:600; font-size:14px; flex:1;">${p.name}</span>
+            <span class="badge ${getStatusClass(p.status)}">${p.status}</span>
+          </div>`;
+      });
+      if(assignedProjects.length===0) html += '<p style="font-size:13px;color:#a1a1aa;">Brak aktywnych projektów</p>';
+      html += `</div>`;
+      
+      html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--primary);">✅ Przypisane Zadania (${assignedTasks.length})</h3>`;
+      html += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
+      assignedTasks.forEach(t => {
+          html += `<div class="card-sm" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:12px; border-radius:8px; cursor:pointer; transition:0.2s;" onclick="openDetail('task', '${t.id}')">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600; font-size:14px; flex:1;">${t.name}</span><span class="badge ${getStatusClass(t.status)}">${t.status}</span></div>
+            ${t.dueDate ? `<div style="font-size:12px; color:#a1a1aa; display:flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:12px;height:12px;"></i> Deadline: ${formatDate(t.dueDate)}</div>` : ''}
+          </div>`;
+      });
+      if(assignedTasks.length===0) html += '<p style="font-size:13px;color:#a1a1aa;">Brak przypisanych zadań</p>';
+      html += `</div>`;
+  }
+  else if (type === 'task') {
+      const t = storage.tasks.find(x => x.id === id);
+      if (!t) return;
+      html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="check-square" style="color:var(--primary)"></i> ${t.name}</h2>`;
+      html += `<span class="badge ${getStatusClass(t.status)}">${t.status}</span>`;
+      html += `<div style="margin-top:20px; font-size:14px; color:#e4e4e7; line-height:1.5;">${t.desc || 'Brak opisu'}</div>`;
+  }
+  
+  inner.innerHTML = html;
+  panel.classList.add('open');
+  if(overlay) overlay.classList.add('open');
+  lucide.createIcons();
 }
 
 function addTaskStep() {

@@ -240,13 +240,19 @@
     <div id="view-contacts" class="view">
       <header class="view-header">
         <div>
-          <h1>Baza Osób</h1>
-          <p class="view-subtitle">Kontakty, partnerzy, współpracownicy</p>
+          <h1>Baza Osób i Zespołów</h1>
+          <p class="view-subtitle">Kontakty, zespoły robocze, współpracownicy</p>
         </div>
-        <button class="btn-primary" onclick="openModal('addContact')">+ Nowa osoba</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-primary" onclick="openModal('addContact')">+ Nowa osoba</button>
+          <button class="btn-secondary" onclick="openModal('addTeam')">+ Nowy zespół</button>
+        </div>
       </header>
-      <input type="text" id="contacts-search" placeholder="Szukaj osoby, organizacji..." class="filter-input full-width" oninput="renderContacts()">
+      <input type="text" id="contacts-search" placeholder="Szukaj osoby, zespołu..." class="filter-input full-width" oninput="renderContacts()">
+      <h3 style="margin-top:20px; font-size:15px; font-weight:600; display:flex; gap:8px; align-items:center;"><i data-lucide="user"></i> Baza Osób</h3>
       <div id="contacts-list" class="contacts-grid"></div>
+      <h3 style="margin-top:30px; font-size:15px; font-weight:600; display:flex; gap:8px; align-items:center;"><i data-lucide="users"></i> Zespoły Projektowe</h3>
+      <div id="teams-list" class="contacts-grid"></div>
     </div>
 
     <!-- CALENDAR VIEW -->
@@ -256,9 +262,16 @@
           <h1>Terminy i Wydarzenia</h1>
           <p class="view-subtitle">Kalendarze, deadline'y, spotkania</p>
         </div>
-        <button class="btn-primary" onclick="openModal('addEvent')">+ Nowe wydarzenie</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-secondary" onclick="changeMonth(-1)"><i data-lucide="chevron-left"></i></button>
+          <button class="btn-secondary" onclick="changeMonth(1)"><i data-lucide="chevron-right"></i></button>
+          <button class="btn-primary" onclick="openModal('addEvent')">+ Termin</button>
+        </div>
       </header>
-      <div id="events-list" class="card-list"></div>
+      <h2 id="calendar-month-label" style="text-align:center; margin-bottom: 20px; font-size: 20px; font-weight:600;"></h2>
+      <div class="calendar-grid" id="monthly-calendar-grid">
+        <!-- Rendered by JS -->
+      </div>
     </div>
 
     <!-- REPORTS VIEW -->
@@ -276,6 +289,26 @@
 
   <!-- ===== MODALS ===== -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeAllModals()"></div>
+
+  <!-- Add Team Modal -->
+  <div class="modal" id="modal-addTeam">
+    <div class="modal-header"><h2>Nowy Zespół</h2><button class="modal-close" onclick="closeAllModals()">✕</button></div>
+    <div class="modal-body">
+      <label>Nazwa zespołu *</label>
+      <input type="text" id="team-name" class="form-input" placeholder="np. Zespół Marketingu">
+      <label>Opis</label>
+      <textarea id="team-desc" class="form-input" rows="2" placeholder="Czym zajmuje się ten zespół..."></textarea>
+      
+      <label style="margin-top: 15px;">Członkowie zespołu</label>
+      <div id="team-members-container" style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:6px;">
+        <!-- checkboxes generated here -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeAllModals()">Anuluj</button>
+      <button class="btn-primary" onclick="saveTeam()">Zapisz</button>
+    </div>
+  </div>
 
   <!-- Add Area Modal -->
   <div class="modal" id="modal-addArea">
@@ -304,6 +337,12 @@
       <input type="text" id="proj-name" class="form-input" placeholder="np. WP2 – Content Development">
       <label>Opis</label>
       <textarea id="proj-desc" class="form-input" rows="3"></textarea>
+      <div class="form-row">
+        <div><label>Główny wykonawca (Owner)</label>
+        <select id="proj-assignee" class="form-input"><option value="">-- Brak --</option></select></div>
+        <div><label>Termin (Deadline)</label>
+        <input type="date" id="proj-deadline" class="form-input"></div>
+      </div>
       <div class="form-row">
         <div>
           <label>Status</label>
@@ -339,6 +378,8 @@
     <div class="modal-body">
       <label>Projekt *</label>
       <select id="task-project" class="form-input"><option value="">-- Wybierz projekt --</option></select>
+      <label>Przypisane do (Osoba/Zespół)</label>
+      <select id="task-assignee" class="form-input"><option value="">-- Brak przypisania --</option></select>
       <label>Nazwa zadania *</label>
       <input type="text" id="task-name" class="form-input" placeholder="np. Przygotować raport WP2">
       <label>Opis / Notatki</label>
