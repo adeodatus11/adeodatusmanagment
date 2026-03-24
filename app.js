@@ -710,7 +710,15 @@ function saveTask() {
         dueDate: document.getElementById('task-due').value,
         progress: document.getElementById('task-progress').value,
         owners: Array.from(document.querySelectorAll('.task-owner-check:checked')).map(c => c.value),
-        workers: Array.from(document.querySelectorAll('.task-worker-check:checked')).map(c => c.value)
+        workers: Array.from(document.querySelectorAll('.task-worker-check:checked')).map(c => c.value),
+        steps: Array.from(document.querySelectorAll('#task-steps-list .step-item input[type="text"]')).map(input => ({
+            id: generateId(),
+            name: input.value.trim(),
+            status: 'Nie zaczęto',
+            deadline: '',
+            notes: '',
+            substeps: []
+        })).filter(s => s.name)
       });
       showToast('Zadanie zostało zapisane! ✅');
   }
@@ -1182,9 +1190,9 @@ function openDetail(type, id) {
       else {
           lh += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
           relatedLogs.forEach(l => {
-              lh += `<div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; font-size:13px;">
+              lh += `<div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; font-size:13px; word-break: break-word;">
                 <div style="color:var(--text-muted); font-size:11px; margin-bottom:4px;">${formatDate(l.date)} – ${l.type}</div>
-                <div>${l.desc}</div>
+                <div>${parseLinks(l.desc)}</div>
               </div>`;
           });
           lh += `</div>`;
@@ -1247,7 +1255,60 @@ function openDetail(type, id) {
       html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="check-square" style="color:var(--primary)"></i> ${t.name}</h2>`;
       html += `<span class="badge ${getStatusClass(t.status)}">${t.status}</span>`;
       html += getAssigneesHtml(t.owners, t.workers);
-      html += `<div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; font-size:14px; color:#e4e4e7; line-height:1.5;">${t.desc || 'Brak opisu'}</div>`;
+      html += `<div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; font-size:14px; color:#e4e4e7; line-height:1.5;">${parseLinks(t.desc) || 'Brak opisu'}</div>`;
+      
+      html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--primary);">Poddziałania / Etapy (${(t.steps||[]).length})</h3>`;
+      html += `<div style="display:flex; flex-direction:column; gap:12px;" id="detail-task-steps">`;
+      (t.steps || []).forEach(step => {
+          html += `
+          <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <input type="text" class="form-input" style="font-weight:600; font-size:14px; background:transparent; border:none; padding:4px;" value="${step.name}" onchange="updateStepField('${t.id}', '${step.id}', 'name', this.value)">
+                  <select class="form-input" style="width:130px; font-size:12px; padding:4px;" onchange="updateStepField('${t.id}', '${step.id}', 'status', this.value)">
+                      <option ${step.status==='Nie zaczęto'?'selected':''}>Nie zaczęto</option>
+                      <option ${step.status==='W toku'?'selected':''}>W toku</option>
+                      <option ${step.status==='Zrobione'?'selected':''}>Zrobione</option>
+                  </select>
+              </div>
+              
+              <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+                  <span style="font-size:12px; color:var(--text-muted);">Deadline:</span>
+                  <input type="date" class="form-input" style="width:130px; font-size:12px; padding:4px;" value="${step.deadline||''}" onchange="updateStepField('${t.id}', '${step.id}', 'deadline', this.value)">
+                  <button class="action-btn delete" onclick="deleteStep('${t.id}', '${step.id}')" title="Usuń etap"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button>
+              </div>
+
+              <div style="margin-bottom:8px;">
+                  <div style="font-size:13px; color:#e4e4e7; background:rgba(255,255,255,0.02); padding:8px; border-radius:4px; margin-bottom:6px;">
+                      ${step.notes ? parseLinks(step.notes) : '<em style="color:var(--text-muted);font-size:12px;">Brak notatki</em>'}
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                      <input type="text" id="note-input-${step.id}" class="form-input" style="font-size:12px; padding:6px;" placeholder="Zmień notatkę (możesz wklejać linki)..." value="${step.notes||''}">
+                      <button class="btn-secondary btn-sm" onclick="updateStepNote('${t.id}', '${step.id}')">Zapisz</button>
+                  </div>
+              </div>
+
+              <div style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:10px;">
+                  <div style="font-size:12px; font-weight:600; margin-bottom:6px; color:#a1a1aa;">Rozbicie (Substeps):</div>
+                  <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:6px;">
+                      ${(step.substeps||[]).map(sub => `
+                          <label style="display:flex; align-items:flex-start; gap:6px; font-size:12px; color:${sub.done?'#666;text-decoration:line-through':'#e4e4e7'}; word-break:break-word;">
+                              <input type="checkbox" onchange="toggleSubstep('${t.id}', '${step.id}', '${sub.id}')" ${sub.done?'checked':''} style="margin-top:2px;">
+                              ${parseLinks(sub.name)}
+                              <button class="action-btn delete" style="padding:0; margin-left:auto;" onclick="deleteSubstep('${t.id}', '${step.id}', '${sub.id}')"><i data-lucide="x" style="width:12px;height:12px;"></i></button>
+                          </label>
+                      `).join('')}
+                  </div>
+                  <div style="display:flex; gap:6px;">
+                      <input type="text" id="substep-input-${step.id}" class="form-input" style="font-size:12px; padding:6px;" placeholder="Wpisz sub-etap i kliknij +">
+                      <button class="btn-secondary btn-sm" onclick="addSubstep('${t.id}', '${step.id}')">+</button>
+                  </div>
+              </div>
+          </div>
+          `;
+      });
+      html += `</div>`;
+      html += `<button class="btn-secondary btn-sm" onclick="addNewStep('${t.id}')" style="margin-top:10px; margin-bottom:20px;">+ Nowy Etap</button>`;
+
       html += renderRelatedLogs(t.id);
   }
   else if (type === 'project') {
@@ -1296,6 +1357,14 @@ function openDetail(type, id) {
       html += renderRelatedLogs(a.id);
   }
   
+  html += `
+  <div style="margin-top:30px; border-top: 1px solid rgba(255,255,255,0.05); padding-top:20px; margin-bottom:20px;">
+    <h3 style="font-size:15px; margin-bottom:12px; color:var(--text-muted); display:flex; gap:6px; align-items:center;"><i data-lucide="message-square" style="width:16px;height:16px;"></i> Dodaj notatkę / komentarz do logów</h3>
+    <textarea id="quick-comment-text" class="form-input" rows="3" placeholder="...twój komentarz (linki są obsługiwane automatycznie)"></textarea>
+    <button class="btn-primary btn-sm" onclick="addQuickComment('${type}', '${id}')" style="margin-top:8px;">Zapisz jako Log</button>
+  </div>
+  `;
+
   inner.innerHTML = html;
   panel.classList.add('open');
   if(overlay) overlay.classList.add('open');
@@ -1306,9 +1375,119 @@ function addTaskStep() {
     const list = document.getElementById('task-steps-list');
     const div = document.createElement('div');
     div.className = 'step-item';
-    div.innerHTML = `<input type="checkbox" class="step-checkbox"> <input type="text" class="form-input" placeholder="Nazwa etapu...">`;
+    div.innerHTML = `<input type="checkbox" class="step-checkbox" style="display:none;"> <input type="text" class="form-input" placeholder="Na etapie kreacji wpisz tylko nazwę. Reszta w szczegółach zadania...">`;
     list.appendChild(div);
 }
+
+// --- COMPLEX STEPS AND COMMENTS HELPERS ---
+window.updateStepField = function(taskId, stepId, field, value) {
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const s = (t.steps||[]).find(x => x.id === stepId);
+    if (!s) return;
+    s[field] = value;
+    saveToStorage();
+};
+
+window.updateStepNote = function(taskId, stepId) {
+    const input = document.getElementById(`note-input-${stepId}`);
+    if (!input) return;
+    updateStepField(taskId, stepId, 'notes', input.value);
+    openDetail('task', taskId);
+};
+
+window.addNewStep = function(taskId) {
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    if (!t.steps) t.steps = [];
+    t.steps.push({
+        id: generateId(),
+        name: 'Nowy Etap',
+        status: 'Nie zaczęto',
+        deadline: '',
+        notes: '',
+        substeps: []
+    });
+    saveToStorage();
+    openDetail('task', taskId);
+};
+
+window.deleteStep = function(taskId, stepId) {
+    if(!confirm('Czy na pewno usunąć ten etap?')) return;
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t || !t.steps) return;
+    t.steps = t.steps.filter(x => x.id !== stepId);
+    saveToStorage();
+    openDetail('task', taskId);
+};
+
+window.addSubstep = function(taskId, stepId) {
+    const input = document.getElementById(`substep-input-${stepId}`);
+    if (!input || !input.value.trim()) return;
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const s = (t.steps||[]).find(x => x.id === stepId);
+    if (!s) return;
+    if (!s.substeps) s.substeps = [];
+    s.substeps.push({ id: generateId(), name: input.value.trim(), done: false });
+    input.value = '';
+    saveToStorage();
+    openDetail('task', taskId);
+};
+
+window.toggleSubstep = function(taskId, stepId, subId) {
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const s = (t.steps||[]).find(x => x.id === stepId);
+    if (!s) return;
+    const sub = (s.substeps||[]).find(x => x.id === subId);
+    if (!sub) return;
+    sub.done = !sub.done;
+    saveToStorage();
+    openDetail('task', taskId);
+};
+
+window.deleteSubstep = function(taskId, stepId, subId) {
+    const t = storage.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    const s = (t.steps||[]).find(x => x.id === stepId);
+    if (!s) return;
+    s.substeps = s.substeps.filter(x => x.id !== subId);
+    saveToStorage();
+    openDetail('task', taskId);
+};
+
+window.addQuickComment = function(targetType, targetId) {
+    const textEl = document.getElementById('quick-comment-text');
+    if (!textEl || !textEl.value.trim()) return;
+
+    let areaId = '', projectId = '', taskId = '';
+    if (targetType === 'task') {
+        taskId = targetId;
+        const t = storage.tasks.find(x => x.id === targetId);
+        if (t) projectId = t.projectId || '';
+        const p = storage.projects.find(x => x.id === projectId);
+        if (p) areaId = p.areaId || '';
+    } else if (targetType === 'project') {
+        projectId = targetId;
+        const p = storage.projects.find(x => x.id === targetId);
+        if (p) areaId = p.areaId || '';
+    } else if (targetType === 'area') {
+        areaId = targetId;
+    }
+
+    storage.logs.push({
+        id: generateId(),
+        desc: textEl.value.trim(),
+        date: new Date().toISOString().split('T')[0],
+        type: 'Inne',
+        areaId, projectId, taskId
+    });
+    
+    saveToStorage();
+    showToast('Komentarz dodany do logów! 💬');
+    openDetail(targetType, targetId);
+};
 
 // --- SPEECH TO TEXT (DARMOWE) ---
 let currentRecognition = null;
