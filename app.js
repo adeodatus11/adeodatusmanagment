@@ -455,7 +455,12 @@ function renderEvents() {
                        if (t) assigneesHtml += ` <span style="opacity:0.6; margin-left:2px;">[${t.name}]</span>`;
                    }
                });
-               return `<div class="cal-event-badge ${it.class}" title="${it.title}">
+               let clickAction = '';
+               if (it.type === 'task') clickAction = `onclick="openDetail('task', '${it.d.id}')"`;
+               else if (it.type === 'project') clickAction = `onclick="openDetail('project', '${it.d.id}')"`;
+               else if (it.type === 'event') clickAction = `onclick="editItem('event', '${it.d.id}')"`;
+               
+               return `<div class="cal-event-badge ${it.class}" title="${it.title}" ${clickAction}>
                  <i data-lucide="${it.icon}" style="width:12px;height:12px;"></i> ${it.title}${assigneesHtml}
                </div>`;
             }).join('');
@@ -990,6 +995,26 @@ function openDetail(type, id) {
       html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="check-square" style="color:var(--primary)"></i> ${t.name}</h2>`;
       html += `<span class="badge ${getStatusClass(t.status)}">${t.status}</span>`;
       html += `<div style="margin-top:20px; font-size:14px; color:#e4e4e7; line-height:1.5;">${t.desc || 'Brak opisu'}</div>`;
+  }
+  else if (type === 'project') {
+      const p = storage.projects.find(x => x.id === id);
+      if (!p) return;
+      const associatedTasks = storage.tasks.filter(t => t.projectId === p.id);
+      
+      html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="folder" style="color:var(--success)"></i> ${p.name}</h2>`;
+      html += `<span class="badge ${getStatusClass(p.status)}">${p.status}</span>`;
+      html += `<div style="margin-top:20px; font-size:14px; color:#e4e4e7; line-height:1.5;">${p.desc || 'Brak opisu'}</div>`;
+      
+      html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--primary);">Zadania w projekcie (${associatedTasks.length})</h3>`;
+      html += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
+      associatedTasks.forEach(t => {
+          html += `<div class="card-sm" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:12px; border-radius:8px; cursor:pointer; transition:0.2s;" onclick="openDetail('task', '${t.id}')">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600; font-size:14px; flex:1;">${t.name}</span><span class="badge ${getStatusClass(t.status)}">${t.status}</span></div>
+            ${t.dueDate ? `<div style="font-size:12px; color:#a1a1aa; display:flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:12px;height:12px;"></i> Deadline: ${formatDate(t.dueDate)}</div>` : ''}
+          </div>`;
+      });
+      if(associatedTasks.length===0) html += '<p style="font-size:13px;color:#a1a1aa;">Brak zadań w tym projekcie</p>';
+      html += `</div>`;
   }
   
   inner.innerHTML = html;
