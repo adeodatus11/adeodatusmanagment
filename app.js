@@ -191,6 +191,9 @@ function openModal(modalId) {
   if (modalId === 'addTeam') {
       populateTeamMembersCheckboxes();
   }
+  if (modalId === 'addLog') {
+      populateLogRelationSelect('log-relation');
+  }
 }
 
 function closeAllModals() {
@@ -275,7 +278,7 @@ function renderList(containerId, items, type) {
 function renderAreas() {
   const grid = document.getElementById('areas-grid');
   grid.innerHTML = storage.areas.map(a => `
-    <div class="area-card" style="--area-color: ${a.color}">
+    <div class="area-card" style="--area-color: ${a.color}" onclick="openDetail('area', '${a.id}')" style="cursor:pointer;">
       <div class="area-name">${a.name}</div>
       <div class="area-desc">${a.desc || ''}</div>
       <div class="action-btns" style="margin-top:10px; display:flex; justify-content:flex-end;">
@@ -299,7 +302,7 @@ function renderProjects() {
   });
 
   list.innerHTML = filtered.map(p => `
-    <div class="task-card">
+    <div class="task-card" onclick="openDetail('project', '${p.id}')" style="cursor:pointer;">
       <div class="task-card-left">
         <div class="task-card-name">${p.name}</div>
         <div class="task-card-meta">
@@ -588,12 +591,16 @@ function saveLog() {
     const desc = document.getElementById('log-desc').value;
     if (!desc) return alert('Opis jest wymagany');
     
+    const relInput = document.getElementById('log-relation');
+    const parentId = relInput ? relInput.value : '';
+    
     if (editingId && editingType === 'log') {
         const l = storage.logs.find(x => x.id === editingId);
         if (l) {
             l.desc = desc;
             l.date = document.getElementById('log-date').value || l.date;
             l.type = document.getElementById('log-type').value;
+            l.parentId = parentId;
         }
         showToast('Wpis do dziennika zaktualizowany! 📋');
     } else {
@@ -601,7 +608,8 @@ function saveLog() {
             id: generateId(),
             desc,
             date: document.getElementById('log-date').value || new Date().toISOString().split('T')[0],
-            type: document.getElementById('log-type').value
+            type: document.getElementById('log-type').value,
+            parentId: parentId
         });
         showToast('Wpis do dziennika zapisany! 📋');
     }
@@ -736,6 +744,11 @@ function editItem(type, id) {
         document.getElementById('log-date').value = l.date || '';
         document.getElementById('log-desc').value = l.desc || '';
         document.querySelector('#modal-addLog h2').innerText = 'Edycja Logu';
+        // Wait for parent DOM
+        setTimeout(() => {
+            const relSelect = document.getElementById('log-relation');
+            if(relSelect) relSelect.value = l.parentId || '';
+        }, 10);
     }
     else if (type === 'contact') {
         const c = storage.contacts.find(x => x.id === id);
@@ -809,6 +822,29 @@ function importData(event) {
 }
 
 // --- SELECT BOX HELPERS ---
+function populateLogRelationSelect(id) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    let html = '<option value="">-- Brak powiązania --</option>';
+    
+    if (storage.areas.length > 0) {
+        html += '<optgroup label="Obszary">';
+        storage.areas.forEach(a => html += `<option value="${a.id}">Obszar: ${a.name}</option>`);
+        html += '</optgroup>';
+    }
+    if (storage.projects.length > 0) {
+        html += '<optgroup label="Projekty">';
+        storage.projects.forEach(p => html += `<option value="${p.id}">Projekt: ${p.name}</option>`);
+        html += '</optgroup>';
+    }
+    if (storage.tasks.length > 0) {
+        html += '<optgroup label="Zadania">';
+        storage.tasks.forEach(t => html += `<option value="${t.id}">Zadanie: ${t.name}</option>`);
+        html += '</optgroup>';
+    }
+    select.innerHTML = html;
+}
+
 function renderAssigneeCheckboxes(containerId, inputClass, selectedArray = []) {
    const container = document.getElementById(containerId);
    if (!container) return;
@@ -941,7 +977,47 @@ function openDetail(type, id) {
   
   let html = '<button class="close-btn" onclick="closeDetailPanel()" style="position:absolute; top:20px; right:20px; font-size:24px; cursor:pointer; background:none; border:none; color:#a1a1aa; transition:0.2s;">×</button>';
   
+  // Helper to format assignees
+  const getAssigneesHtml = (ownersArray, workersArray) => {
+      let b = [];
+      const gather = (list, isWorker) => {
+          if(!list) return;
+          list.forEach(idStr => {
+              const key = idStr.split('_')[1];
+              if(idStr.startsWith('contact_')) {
+                  const c = storage.contacts.find(x=>x.id===key);
+                  if(c) b.push(`<span style="background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; display:inline-block;"><i data-lucide="user" style="width:10px;height:10px;"></i> ${c.first} ${c.last}${isWorker?' (w)':' (o)'}</span>`);
+              } else if(idStr.startsWith('team_')) {
+                  const t = (storage.teams||[]).find(x=>x.id===key);
+                  if(t) b.push(`<span style="background:rgba(99,102,241,0.1); color:#c7d2fe; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; display:inline-block;"><i data-lucide="users" style="width:10px;height:10px;"></i> ${t.name}${isWorker?' (w)':' (o)'}</span>`);
+              }
+          });
+      };
+      gather(ownersArray, false);
+      gather(workersArray, true);
+      return b.length > 0 ? `<div style="margin-top:10px;">${b.join('')}</div>` : `<div style="margin-top:10px; font-size:11px; color:#666;">Brak przypisanych</div>`;
+  };
+  
+  // Helper to render Logs section
+  const renderRelatedLogs = (parentId) => {
+      const relatedLogs = storage.logs.filter(l => l.parentId && String(l.parentId) === String(parentId));
+      let lh = `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:#f4f4f5;"><i data-lucide="clipboard-list" style="width:16px;height:16px;"></i> Powiązane Logi (${relatedLogs.length})</h3>`;
+      if(relatedLogs.length === 0) lh += '<p style="font-size:13px;color:#a1a1aa;">Brak powiązanych logów i wpisów pamiętnika.</p>';
+      else {
+          lh += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
+          relatedLogs.forEach(l => {
+              lh += `<div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:6px; font-size:13px;">
+                <div style="color:var(--text-muted); font-size:11px; margin-bottom:4px;">${formatDate(l.date)} – ${l.type}</div>
+                <div>${l.desc}</div>
+              </div>`;
+          });
+          lh += `</div>`;
+      }
+      return lh;
+  };
+
   if (type === 'contact' || type === 'team') {
+
       const isTeam = type === 'team';
       const entity = isTeam ? (storage.teams||[]).find(x => x.id === id) : storage.contacts.find(x => x.id === id);
       if (!entity) return;
@@ -994,7 +1070,9 @@ function openDetail(type, id) {
       if (!t) return;
       html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="check-square" style="color:var(--primary)"></i> ${t.name}</h2>`;
       html += `<span class="badge ${getStatusClass(t.status)}">${t.status}</span>`;
-      html += `<div style="margin-top:20px; font-size:14px; color:#e4e4e7; line-height:1.5;">${t.desc || 'Brak opisu'}</div>`;
+      html += getAssigneesHtml(t.owners, t.workers);
+      html += `<div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; font-size:14px; color:#e4e4e7; line-height:1.5;">${t.desc || 'Brak opisu'}</div>`;
+      html += renderRelatedLogs(t.id);
   }
   else if (type === 'project') {
       const p = storage.projects.find(x => x.id === id);
@@ -1003,18 +1081,43 @@ function openDetail(type, id) {
       
       html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px;"><i data-lucide="folder" style="color:var(--success)"></i> ${p.name}</h2>`;
       html += `<span class="badge ${getStatusClass(p.status)}">${p.status}</span>`;
-      html += `<div style="margin-top:20px; font-size:14px; color:#e4e4e7; line-height:1.5;">${p.desc || 'Brak opisu'}</div>`;
+      html += getAssigneesHtml(p.owners, p.workers);
+      html += `<div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; font-size:14px; color:#e4e4e7; line-height:1.5;">${p.desc || 'Brak opisu'}</div>`;
       
       html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--primary);">Zadania w projekcie (${associatedTasks.length})</h3>`;
       html += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
       associatedTasks.forEach(t => {
           html += `<div class="card-sm" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2); padding:12px; border-radius:8px; cursor:pointer; transition:0.2s;" onclick="openDetail('task', '${t.id}')">
             <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600; font-size:14px; flex:1;">${t.name}</span><span class="badge ${getStatusClass(t.status)}">${t.status}</span></div>
-            ${t.dueDate ? `<div style="font-size:12px; color:#a1a1aa; display:flex; align-items:center; gap:4px;"><i data-lucide="calendar" style="width:12px;height:12px;"></i> Deadline: ${formatDate(t.dueDate)}</div>` : ''}
+            ${getAssigneesHtml(t.owners, t.workers)}
           </div>`;
       });
       if(associatedTasks.length===0) html += '<p style="font-size:13px;color:#a1a1aa;">Brak zadań w tym projekcie</p>';
       html += `</div>`;
+      
+      html += renderRelatedLogs(p.id);
+  }
+  else if (type === 'area') {
+      const a = storage.areas.find(x => x.id === id);
+      if (!a) return;
+      const associatedProjects = storage.projects.filter(p => p.areaId === a.id);
+      
+      html += `<h2 style="font-size:22px; font-weight:700; margin-bottom:10px; padding-right:30px; display:flex; gap:8px; align-items:center;"><span style="width:16px;height:16px;border-radius:50%;background:${a.color};display:inline-block;"></span> ${a.name}</h2>`;
+      html += getAssigneesHtml(a.owners, a.workers);
+      html += `<div style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:8px; font-size:14px; color:#e4e4e7; line-height:1.5;">${a.desc || 'Brak opisu'}</div>`;
+      
+      html += `<h3 style="font-size:15px; margin-bottom:12px; margin-top:25px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px; color:var(--success);">Projekty w Obszarze (${associatedProjects.length})</h3>`;
+      html += `<div class="detail-assigned-list" style="display:flex; flex-direction:column; gap:8px;">`;
+      associatedProjects.forEach(p => {
+          html += `<div class="card-sm" style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); padding:12px; border-radius:8px; cursor:pointer; transition:0.2s;" onclick="openDetail('project', '${p.id}')">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-weight:600; font-size:14px; flex:1;">${p.name}</span><span class="badge ${getStatusClass(p.status)}">${p.status}</span></div>
+            ${getAssigneesHtml(p.owners, p.workers)}
+          </div>`;
+      });
+      if(associatedProjects.length===0) html += '<p style="font-size:13px;color:#a1a1aa;">Brak projektów w tym obszarze</p>';
+      html += `</div>`;
+      
+      html += renderRelatedLogs(a.id);
   }
   
   inner.innerHTML = html;
