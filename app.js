@@ -1763,11 +1763,16 @@ async function processTodoBrief(text, apiKey) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
             })
         });
         
-        if (!response.ok) throw new Error('Błąd API Gemini');
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('Gemini API Error:', response.status, errBody);
+            throw new Error('Błąd HTTP ' + response.status);
+        }
         const data = await response.json();
         
         if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
@@ -1776,12 +1781,12 @@ async function processTodoBrief(text, apiKey) {
             else if (jsonText.startsWith('\`\`\`')) jsonText = jsonText.replace(/\`\`\`/gi, '').trim();
             
             const arr = JSON.parse(jsonText);
-            return arr.map(a => ({
+            return Array.isArray(arr) ? arr.map(a => ({
                 id: generateId(),
-                text: a.text,
+                text: a.text || 'Zadanie',
                 date: a.date || today,
                 done: false
-            }));
+            })) : [];
         }
         return [];
     } catch (e) {
