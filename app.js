@@ -1147,6 +1147,18 @@ function closeDetailPanel() {
     if(o) o.classList.remove('open');
 }
 
+function parseLinks(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.innerText = text;
+    let html = div.innerHTML;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    html = html.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" style="color: var(--primary); text-decoration: underline;">${url}</a>`;
+    });
+    return html.replace(/\n/g, '<br>');
+}
+
 function openDetail(type, id) {
   const panel = document.getElementById('detail-panel');
   const inner = document.getElementById('detail-panel-inner');
