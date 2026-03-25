@@ -61,6 +61,7 @@
         <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="exportData()"><i data-lucide="download"></i> Eksport danych</button>
         <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="document.getElementById('import-file').click()"><i data-lucide="upload"></i> Import danych</button>
         <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
+        <button class="btn-quick" id="btn-sync" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center;" onclick="forceSync()"><i data-lucide="refresh-cw"></i> Synchronizuj z chmurą</button>
         <button class="btn-quick" style="background:transparent; border:1px solid rgba(255,255,255,0.3); color:#ccc; font-size:12px; display:flex; gap:6px; align-items:center; margin-top:8px;" onclick="openModal('aiSettings')"><i data-lucide="sparkles" style="color:#a855f7;"></i> Ustawienia AI</button>
       </div>
     </div>
@@ -558,6 +559,6 @@
   <div class="detail-overlay" id="detail-overlay" onclick="closeDetailPanel()"></div>
 
   <div id="toast"></div>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

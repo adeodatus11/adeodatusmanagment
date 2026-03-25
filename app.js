@@ -132,6 +132,23 @@ async function saveToStorage() {
   }
 }
 
+async function forceSync() {
+    if (!appPassword) return;
+    const btn = document.getElementById('btn-sync');
+    if (btn) {
+        btn.innerHTML = '<i data-lucide="refresh-cw"></i> Pobieranie...';
+        if (window.lucide) lucide.createIcons();
+    }
+    
+    await loadFromStorage(appPassword);
+    
+    if (btn) {
+        btn.innerHTML = '<i data-lucide="refresh-cw"></i> Synchronizuj z chmurą';
+        if (window.lucide) lucide.createIcons();
+    }
+    showToast('Zsynchronizowano pomyślnie! 🔄');
+}
+
 function showToast(message) {
     const toast = document.getElementById('toast');
     if (!toast) return;
