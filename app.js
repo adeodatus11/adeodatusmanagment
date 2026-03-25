@@ -411,7 +411,7 @@ function renderTasks(filter = null) {
   });
 
   list.innerHTML = filtered.map(t => `
-    <div class="task-card">
+    <div class="task-card" onclick="openDetail('task', '${t.id}')" style="cursor:pointer;">
       <div class="task-card-left">
         <div class="task-card-name">${t.name}</div>
         <div class="task-card-meta">
