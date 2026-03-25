@@ -1621,7 +1621,7 @@ async function formatWithGemini(text) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: "Jesteś osobistym asystentem pomagającym formatować notatki ze zgłoszeń w systemie zarządzania zadaniami. Otrzymasz poniżej 'brudny' tekst nagrany z mowy. \nTwoje zadanie to sformatować go, poprawić literówki gramatykę, usunąć ewentualne zająknięcia (np. yyy, eee), dodać znaki przestankowe. \nNIE ZMIENIAJ znaczenia ani ogólnego wydźwięku, tylko uporządkuj tekst żeby był czytelny w dzienniku logów. \nZwróć TYLKO wynikowy tekst, żadnych innych komentarzy.\nTekst do sformatowania:\n\n" + text
+                        text: "Jesteś osobistym asystentem pomagającym formatować notatki ze zgłoszeń w systemie zarządzania zadaniami. Otrzymasz poniżej 'brudny' tekst nagrany z mowy. \nTwoje zadanie to sformatować go, poprawić literówki i gramatykę, usunąć ewentualne zająknięcia (np. yyy, eee) oraz dodać znaki przestankowe. \nUWAGA: Tekst jest wideo/audio w języku polskim. NIE ZMIENIAJ znaczenia ani ogólnego wydźwięku, nie tłumacz na inny język, tylko uporządkuj tekst żeby był czytelny w dzienniku logów. \nZwróć TYLKO sformatowany polski tekst, bez dodatkowych komentarzy z Twojej strony.\nTekst do sformatowania:\n\n" + text
                     }]
                 }]
             })
