@@ -391,22 +391,25 @@ function renderList(containerId, items, type) {
 function renderTodos() {
     const list = document.getElementById('widget-todos');
     if (!list) return;
-    const todos = storage.todos || [];
+    const allTodos = storage.todos || [];
+    const todos = allTodos.filter(t => !t.archived);
+    const archivedCount = allTodos.filter(t => t.archived).length;
+    
     if (todos.length === 0) {
-        list.innerHTML = '<div class="empty-state-small">Brak szybkich zadań. Podyktuj co masz do zrobienia!</div>';
+        list.innerHTML = `<div class="empty-state-small">Brak zadań. Wpisz lub podyktuj co masz dzisiaj do zrobienia!${archivedCount > 0 ? ` (${archivedCount} zarchiwizowanych)` : ''}</div>`;
         return;
     }
     
     todos.sort((a,b) => (a.date > b.date) ? 1 : (a.date < b.date ? -1 : 0));
     
     list.innerHTML = todos.map(t => {
-        const isDone = t.done ? 'text-decoration: line-through; opacity: 0.6;' : '';
+        const isDone = t.done ? 'text-decoration: line-through; opacity: 0.55;' : '';
         const checkIcon = t.done ? 'check-circle-2' : 'circle';
-        const color = t.done ? 'var(--success)' : 'var(--text-muted)';
+        const checkColor = t.done ? 'var(--success)' : 'var(--text-muted)';
         
         return `<div class="widget-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
           <div style="display:flex; align-items:center; gap:10px; cursor:pointer; flex: 1; ${isDone}" onclick="toggleTodo('${t.id}')">
-            <i data-lucide="${checkIcon}" style="color:${color}; width:18px; height:18px; flex-shrink:0;"></i>
+            <i data-lucide="${checkIcon}" style="color:${checkColor}; width:18px; height:18px; flex-shrink:0;"></i>
             <div style="flex:1;">
                <div class="widget-item-name" style="font-size:13px; line-height:1.2;">${t.text}</div>
                <div class="widget-item-meta" style="font-size:11px; margin-top:2px;">${formatDate(t.date)}</div>
@@ -415,7 +418,11 @@ function renderTodos() {
           <button class="action-btn delete" style="padding:4px; flex-shrink:0;" onclick="deleteTodo('${t.id}')" title="Usuń"><i data-lucide="trash-2" style="width:14px; height:14px;"></i></button>
         </div>`;
     }).join('');
-    // No full lucide.createIcons here as it will be called by renderDashboard, but we can call it to be safe
+    
+    if (archivedCount > 0) {
+        list.innerHTML += `<div style="font-size:11px; color:var(--text-muted); text-align:right; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">${archivedCount} zarchiwizowanych</div>`;
+    }
+    
     if (window.lucide) lucide.createIcons();
 }
 
@@ -1695,105 +1702,78 @@ window.startTodoDictation = function(btnId) {
     const recognition = new SpeechRecognition();
     recognition.lang = 'pl-PL';
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true; // show interim so user sees it's working
 
-    const originalHtml = `<i data-lucide="mic" style="width:14px; height:14px;"></i> Podyktuj co masz do zrobienia`;
+    const inputEl = document.getElementById('todo-input');
+    const originalHtml = `<i data-lucide="mic" style="width:14px; height:14px;"></i>`;
 
     recognition.onstart = function() {
-        btn.innerHTML = '<i data-lucide="square" style="width:14px; height:14px; color: var(--danger);"></i> Zatrzymaj nagrywanie';
-        btn.style.borderColor = 'var(--danger)';
+        btn.innerHTML = '<i data-lucide="square" style="width:14px; height:14px; color:var(--danger);"></i>';
+        btn.style.background = 'rgba(239,68,68,0.15)';
         if (window.lucide) lucide.createIcons();
     };
 
-    let fullTranscript = '';
     recognition.onresult = function(event) {
+        let interim = '';
+        let final = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) fullTranscript += event.results[i][0].transcript + ' ';
+            if (event.results[i].isFinal) {
+                final += event.results[i][0].transcript;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+        if (final) {
+            inputEl.value = (inputEl.value + ' ' + final).trim();
+        } else if (interim) {
+            // show interim as placeholder text
+            inputEl.placeholder = interim;
         }
     };
 
     recognition.onerror = function(event) {
-        console.error('Błąd dyktowania:', event.error);
-        if (event.error !== 'no-speech') showToast('Przerwano nasłuchiwanie.');
+        if (event.error !== 'no-speech') showToast('Błąd mikrofonu: ' + event.error);
     };
 
-    recognition.onceFormatted = false;
-
-    recognition.onend = async function() {
+    recognition.onend = function() {
         currentRecognition = null;
-        if(btn) {
-            btn.innerHTML = '<i data-lucide="sparkles" style="width:14px; height:14px; color:#a855f7;"></i> AI analizuje zadania...';
-            btn.style.borderColor = '#a855f7';
-            if (window.lucide) lucide.createIcons();
-
-            const apiKey = localStorage.getItem('gemini_api_key');
-            fullTranscript = fullTranscript.trim();
-            if (apiKey && fullTranscript && !recognition.onceFormatted) {
-                recognition.onceFormatted = true;
-                const newTodos = await processTodoBrief(fullTranscript, apiKey);
-                if(newTodos && newTodos.length > 0) {
-                    storage.todos = storage.todos || [];
-                    storage.todos.push(...newTodos);
-                    saveToStorage();
-                    renderTodos();
-                    showToast(`Dodano ${newTodos.length} nowych zadań! ✨`);
-                } else {
-                    showToast('Nie udało się utworzyć zadań (błąd AI lub niezrozumiały tekst).');
-                }
-            } else if (!apiKey && fullTranscript) {
-                showToast('Najpierw skonfiguruj darmowy klucz API Gemini w ustawieniach!');
-            }
-
-            btn.innerHTML = originalHtml;
-            btn.style.borderColor = 'rgba(255,255,255,0.3)';
-            if (window.lucide) lucide.createIcons();
-        }
+        btn.innerHTML = originalHtml;
+        btn.style.background = '';
+        inputEl.placeholder = 'Wpisz lub podyktuj zadanie...';
+        if (window.lucide) lucide.createIcons();
+        // Focus the input so user can still edit before adding
+        if (inputEl.value) inputEl.focus();
     };
 
     currentRecognition = recognition;
     recognition.start();
 };
 
-async function processTodoBrief(text, apiKey) {
+function addManualTodo() {
+    const inputEl = document.getElementById('todo-input');
+    const dateEl = document.getElementById('todo-date');
+    const text = inputEl ? inputEl.value.trim() : '';
+    if (!text) { showToast('Wpisz treść zadania!'); return; }
     const today = new Date().toISOString().split('T')[0];
-    const prompt = `Zinterpretuj poniższy podyktowany tekst w języku polskim jako listę krótkich zadań do zrobienia (to-do). Wyodrębnij nazwy zadań i przypisane im daty. Jeśli użytkownik nie podał dokładnej daty, przypisz dzisiejszą datę (${today}). Jeśli podał "jutro", wstaw datę jutrzejszą obliczoną względem dzisiaj, "pojutrze" - datę pojutrze itd. Zwróć wynik JEDYNIE jako poprawny kod JSON w postaci tablicy obiektów: [{ "text": "nazwa zadania", "date": "YYYY-MM-DD" }]. Nie dodawaj znaczników markdown, nagłówków, pustych linii czy dodatkowych komentarzy. Tekst z dyktafonu: "${text}"`;
-    
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "application/json" }
-            })
-        });
-        
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error('Gemini API Error:', response.status, errBody);
-            throw new Error('Błąd HTTP ' + response.status);
-        }
-        const data = await response.json();
-        
-        if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
-            let jsonText = data.candidates[0].content.parts[0].text.trim();
-            if (jsonText.startsWith('\`\`\`json')) jsonText = jsonText.replace(/\`\`\`json/gi, '').replace(/\`\`\`/gi, '').trim();
-            else if (jsonText.startsWith('\`\`\`')) jsonText = jsonText.replace(/\`\`\`/gi, '').trim();
-            
-            const arr = JSON.parse(jsonText);
-            return Array.isArray(arr) ? arr.map(a => ({
-                id: generateId(),
-                text: a.text || 'Zadanie',
-                date: a.date || today,
-                done: false
-            })) : [];
-        }
-        return [];
-    } catch (e) {
-        console.error('Gemini processing error:', e);
-        return [];
-    }
+    const date = (dateEl && dateEl.value) ? dateEl.value : today;
+
+    storage.todos = storage.todos || [];
+    storage.todos.push({ id: generateId(), text, date, done: false, archived: false });
+    saveToStorage();
+    renderTodos();
+    inputEl.value = '';
+    if (dateEl) dateEl.value = '';
+    showToast('Zadanie dodane! ✅');
 }
+
+window.archiveCompletedTodos = function() {
+    if (!storage.todos) return;
+    const count = storage.todos.filter(t => t.done && !t.archived).length;
+    storage.todos = storage.todos.map(t => t.done ? { ...t, archived: true } : t);
+    saveToStorage();
+    renderTodos();
+    showToast(count > 0 ? `Zarchiwizowano ${count} zadań 📦` : 'Brak zadań do archiwizacji.');
+};
 
 async function formatWithGemini(text) {
     const apiKey = localStorage.getItem('gemini_api_key');
