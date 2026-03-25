@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -30,7 +30,7 @@
     </div>
     <nav class="sidebar-nav">
       <a href="#" class="nav-item active" data-view="dashboard" onclick="showView('dashboard')">
-        <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span>
+        <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Pulpit</span>
       </a>
       <a href="#" class="nav-item" data-view="areas" onclick="showView('areas')">
         <span class="nav-icon"><i data-lucide="layers"></i></span><span class="nav-label">Obszary</span>
@@ -84,7 +84,7 @@
     <div id="view-dashboard" class="view active">
       <header class="view-header">
         <div>
-          <h1>Dashboard</h1>
+          <h1>Pulpit</h1>
           <p class="view-subtitle" id="today-date"></p>
         </div>
         <div class="header-actions">
@@ -558,6 +558,6 @@
   <div class="detail-overlay" id="detail-overlay" onclick="closeDetailPanel()"></div>
 
   <div id="toast"></div>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

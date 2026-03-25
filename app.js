@@ -286,9 +286,19 @@ function closeAllModals() {
 }
 
 // --- RENDERERS ---
+function updateClock() {
+  const el = document.getElementById('today-date');
+  if (!el) return;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const timeStr = now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  el.innerText = `${dateStr}, ${timeStr}`;
+}
+setInterval(updateClock, 1000);
+
 function renderDashboard() {
   const now = new Date();
-  document.getElementById('today-date').innerText = now.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+  updateClock();
 
   const overdue = storage.tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'Gotowe');
   document.getElementById('kpi-overdue').innerText = overdue.length;
