@@ -126,6 +126,19 @@
         </div>
       </div>
 
+      <!-- AI Quick To-Do Brief -->
+      <div class="dash-widget" style="margin-bottom: 20px; border-color: rgba(168,85,247,0.3);">
+        <div class="widget-header" style="justify-content: space-between;">
+          <span style="display:flex; align-items:center; gap:8px;"><i data-lucide="sparkles" style="color:#a855f7;"></i> Szybki Brief AI (Do zrobienia)</span>
+          <button id="btn-dictate-todo" class="btn-primary btn-sm" style="display:flex; align-items:center; gap:6px; font-size:12px; padding:6px 10px;" onclick="startTodoDictation('btn-dictate-todo')">
+            <i data-lucide="mic" style="width:14px; height:14px;"></i> Podyktuj co masz do zrobienia
+          </button>
+        </div>
+        <div class="widget-body" id="widget-todos" style="min-height: 50px;">
+          <!-- Todos rendered here -->
+        </div>
+      </div>
+
       <!-- Dashboard columns -->
       <div class="dashboard-cols">
         <!-- Left -->
